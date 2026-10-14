@@ -1,0 +1,26 @@
+{
+	"name": "Fifty Years Beyond Earth",
+	"short_name": "Beyond Earth",
+	"description": "An interactive scroll-driven chronicle of humanity's greatest space exploration achievements from 1975 to today.",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#050607",
+	"theme_color": "#050607",
+	"icons": [
+		{
+			"src": "/favicon-32x32.png",
+			"sizes": "32x32",
+			"type": "image/png"
+		},
+		{
+			"src": "/apple-touch-icon.png",
+			"sizes": "180x180",
+			"type": "image/png"
+		},
+		{
+			"src": "/favicon.svg",
+			"sizes": "any",
+			"type": "image/svg+xml"
+		}
+	]
+}
