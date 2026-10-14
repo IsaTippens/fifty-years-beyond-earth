@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" class="dark scroll-smooth bg-[#03050a] text-[#f0f4f8]">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta name="theme-color" content="#03050a" />
+		<meta name="color-scheme" content="dark" />
+		<meta
+			name="description"
+			content="Fifty Years Beyond Earth (1975–2026) — An interactive 3D &amp; scroll-driven narrative chronicle of humanity's greatest space exploration achievements."
+		/>
+		<title>Fifty Years Beyond Earth — 1975–2026 Space Exploration Chronicle</title>
+		<link
+			rel="preload"
+			as="image"
+			href="/assets/chapters/iss-earth-limb-1600.avif"
+			type="image/avif"
+			imagesrcset="/assets/chapters/iss-earth-limb-800.avif 800w, /assets/chapters/iss-earth-limb-1600.avif 1600w, /assets/chapters/iss-earth-limb-2400.avif 2400w"
+			imagesizes="100vw"
+		/>
+		<style>
+			:root {
+				--font-display:
+					'Avenir Next', 'Montserrat', 'Futura', 'Segoe UI', 'Helvetica Neue', 'Inter',
+					system-ui, -apple-system, sans-serif;
+				--font-sans:
+					'Inter', 'SF Pro Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto,
+					'Helvetica Neue', Arial, sans-serif;
+				--font-mono:
+					'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', 'Roboto Mono',
+					'Source Code Pro', ui-monospace, Menlo, Monaco, Consolas, monospace;
+			}
+		</style>
+		%sveltekit.head%
+	</head>
+	<body
+		data-sveltekit-preload-data="hover"
+		class="bg-[#03050a] text-[#f0f4f8] antialiased selection:bg-cyan-500/30 selection:text-cyan-200 overflow-x-hidden"
+	>
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>
