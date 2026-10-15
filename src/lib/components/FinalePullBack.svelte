@@ -323,11 +323,11 @@
 			<!-- Deep Documentary Vignette & Edge Blending into #050607 True Void -->
 			<div
 				class="absolute inset-0"
-				style="background: radial-gradient(ellipse 72% 58% at 50% 48%, rgba(5, 6, 7, 0.08) 0%, rgba(5, 6, 7, 0.46) 62%, rgba(5, 6, 7, 0.94) 92%, #050607 100%);"
+				style="background: radial-gradient(ellipse 76% 62% at 50% 48%, rgba(5, 6, 7, 0.02) 0%, rgba(5, 6, 7, 0.30) 64%, rgba(5, 6, 7, 0.90) 92%, #050607 100%);"
 			></div>
 			<div
 				class="absolute inset-0"
-				style="background: linear-gradient(180deg, #050607 0%, rgba(5, 6, 7, 0.25) 18%, rgba(5, 6, 7, 0.18) 72%, rgba(5, 6, 7, 0.92) 94%, #050607 100%);"
+				style="background: linear-gradient(180deg, #050607 0%, rgba(5, 6, 7, 0.16) 18%, rgba(5, 6, 7, 0.12) 74%, rgba(5, 6, 7, 0.88) 94%, #050607 100%);"
 			></div>
 		</div>
 
@@ -1104,9 +1104,12 @@
 		     LAYER 4: BEAT 1 (0.00 - 0.18) — NEAR-BLACK OPENING COPY
 		     ===================================================================== -->
 		<div
-			class="pointer-events-none absolute inset-0 flex items-center justify-center px-6 sm:px-12"
+			class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 sm:px-12"
 			style={`opacity: ${beat1Opacity.toFixed(4)}; transform: translate3d(0, ${beat1TranslateY.toFixed(2)}px, 0);`}
 		>
+			<div class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#C89B57]/85 text-center">
+				FINAL HORIZON · 340 AU TO 100,000 LIGHT-YEARS · LOGARITHMIC PULL-BACK
+			</div>
 			<p
 				class="max-w-[36ch] text-center font-display font-normal italic leading-[1.24] tracking-[-0.02em] text-[#E8E6E1]"
 				style="font-size: clamp(1.5rem, 3vw, 2.5rem);"
@@ -1137,7 +1140,7 @@
 
 <style>
 	.finale-gaia-grade {
-		filter: saturate(0.74) contrast(1.12) brightness(0.68);
+		filter: saturate(0.90) contrast(1.15) brightness(0.86);
 	}
 
 	.finale-film-grain {

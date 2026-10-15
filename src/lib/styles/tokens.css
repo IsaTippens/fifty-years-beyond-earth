@@ -99,8 +99,8 @@
 	--grain-opacity: 0.028;
 	--vignette-gradient: radial-gradient(
 		ellipse at 50% 50%,
-		transparent 52%,
-		rgba(5, 6, 7, 0.55) 84%,
-		rgba(5, 6, 7, 0.92) 100%
+		transparent 68%,
+		rgba(5, 6, 7, 0.24) 88%,
+		rgba(5, 6, 7, 0.52) 100%
 	);
 }

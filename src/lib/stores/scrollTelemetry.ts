@@ -12,6 +12,7 @@ export interface TelemetryState {
 	voyagerLightHoursFormatted: string; // e.g. "23h 18m 42.1s"
 	cameraDistanceAu: number;
 	cameraAltitudeFormatted: string;
+	spatialRegionLabel: string;
 	signalPowerDbm: number;
 	rtgPowerWatts: number;
 }
@@ -199,35 +200,30 @@ export function formatLightTime(lightSeconds: number): string {
 }
 
 /**
+ * Returns the concise spatial regime label for the current heliocentric distance.
+ */
+export function formatSpatialRegion(distanceAu: number): string {
+	const km = distanceAu * AU_IN_KM;
+	if (km < 2_000) return 'Low Earth Orbit';
+	if (km < 1_000_000) return 'Cislunar';
+	if (distanceAu < 0.1) return 'Inner Space';
+	if (distanceAu < 2.5) return 'Mars / Inner System';
+	if (distanceAu < 35.0) return 'Gas Giant Realm';
+	if (distanceAu < 118.0) return 'Heliosheath';
+	if (distanceAu < 126.0) return 'Heliopause';
+	if (distanceAu < 200.0) return 'Interstellar Space';
+	return 'Centennial Horizon';
+}
+
+/**
  * Formats camera spatial altitude across 9 orders of magnitude (222 km LEO -> 340 AU Horizon).
  */
 export function formatCameraAltitude(distanceAu: number): string {
-	const km = distanceAu * AU_IN_KM;
-	if (km < 2_000) {
-		return `${Math.round(km).toLocaleString('en-US')} km LEO`;
-	}
-	if (km < 1_000_000) {
-		return `${Math.round(km).toLocaleString('en-US')} km Cislunar`;
-	}
+	const region = formatSpatialRegion(distanceAu);
 	if (distanceAu < 0.1) {
-		return `${(km / 1_000_000).toFixed(2)}M km Inner Space`;
+		return `${distanceAu.toFixed(4)} AU · ${region}`;
 	}
-	if (distanceAu < 2.5) {
-		return `${distanceAu.toFixed(2)} AU · Mars / Inner System`;
-	}
-	if (distanceAu < 35.0) {
-		return `${distanceAu.toFixed(2)} AU · Gas Giant Realm`;
-	}
-	if (distanceAu < 118.0) {
-		return `${distanceAu.toFixed(1)} AU · Heliosheath`;
-	}
-	if (distanceAu < 126.0) {
-		return `${distanceAu.toFixed(1)} AU · Heliopause`;
-	}
-	if (distanceAu < 200.0) {
-		return `${distanceAu.toFixed(2)} AU · Interstellar Space`;
-	}
-	return `${distanceAu.toFixed(1)} AU · Centennial Horizon`;
+	return `${distanceAu.toFixed(1)} AU · ${region}`;
 }
 
 /**
@@ -307,6 +303,7 @@ function buildTelemetryState(
 
 	const cameraDistanceAu = voyagerDistanceAu;
 	const cameraAltitudeFormatted = formatCameraAltitude(cameraDistanceAu);
+	const spatialRegionLabel = formatSpatialRegion(cameraDistanceAu);
 	const signalPowerDbm = computeDsnSignalPowerDbm(voyagerDistanceAu);
 	const rtgPowerWatts = computeRtgPowerWatts(year);
 
@@ -322,6 +319,7 @@ function buildTelemetryState(
 		voyagerLightHoursFormatted,
 		cameraDistanceAu,
 		cameraAltitudeFormatted,
+		spatialRegionLabel,
 		signalPowerDbm,
 		rtgPowerWatts
 	};
@@ -379,6 +377,7 @@ export function startLiveVoyagerTicker(): () => void {
 				const voyagerLightHoursFormatted = formatLightTime(voyagerLightSeconds);
 				const cameraDistanceAu = voyagerDistanceAu;
 				const cameraAltitudeFormatted = formatCameraAltitude(cameraDistanceAu);
+				const spatialRegionLabel = formatSpatialRegion(cameraDistanceAu);
 				const signalPowerDbm = computeDsnSignalPowerDbm(voyagerDistanceAu);
 
 				return {
@@ -389,6 +388,7 @@ export function startLiveVoyagerTicker(): () => void {
 					voyagerLightHoursFormatted,
 					cameraDistanceAu,
 					cameraAltitudeFormatted,
+					spatialRegionLabel,
 					signalPowerDbm
 				};
 			});

@@ -4,6 +4,7 @@
 		CHAPTER_REFERENCES,
 		ALL_SOURCES,
 		SOURCES_MARKDOWN,
+		getPublicationLabel,
 		type ChapterReferenceGroup
 	} from '$lib/data/missions';
 	import { ASSET_MANIFEST, ASSETS_MARKDOWN } from '$lib/data/assets';
@@ -163,7 +164,7 @@
 								<div class="py-2.5 border-b border-[#E8E6E1]/10 last:border-b-0 md:last:border-b flex flex-col justify-center min-w-0">
 									<div class="flex items-baseline justify-between gap-3 min-w-0">
 										<h3
-											class="font-display text-base font-normal text-[#E8E6E1] truncate"
+											class="font-display text-base font-normal text-[#E8E6E1] leading-snug"
 											title={entry.fullTitle}
 										>
 											{entry.missionName}
@@ -223,7 +224,7 @@
 							<div class="py-2.5 border-b border-[#E8E6E1]/10 last:border-b-0 md:last:border-b flex flex-col justify-center min-w-0">
 								<div class="flex items-baseline justify-between gap-3 min-w-0">
 									<h3
-										class="font-display text-base font-normal text-[#E8E6E1] truncate"
+										class="font-display text-base font-normal text-[#E8E6E1] leading-snug"
 										title={asset.title}
 									>
 										{asset.title}
@@ -232,11 +233,11 @@
 										{asset.archiveId} · {asset.year}
 									</span>
 								</div>
-								<div class="mt-0.5 font-sans text-xs text-[#E8E6E1]/68 truncate" title={asset.creditLine}>
+								<div class="mt-1 font-sans text-xs text-[#E8E6E1]/68 leading-snug" title={asset.creditLine}>
 									{asset.creditLine}
 								</div>
-								<div class="mt-1 flex items-center justify-between gap-3 font-mono-tech text-xs">
-									<span class="text-[#E8E6E1]/55 truncate" title={asset.license}>
+								<div class="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-mono-tech text-xs">
+									<span class="text-[#E8E6E1]/55 leading-snug" title={asset.license}>
 										{asset.license}
 									</span>
 									<a
@@ -245,7 +246,7 @@
 										rel="noopener noreferrer"
 										class="inline-flex items-center gap-1 text-[#C89B57] hover:text-[#DDB474] shrink-0 transition-colors duration-200"
 									>
-										<span>Source</span>
+										<span>{getPublicationLabel(asset.sourceUrl)}</span>
 										<span aria-hidden="true">↗</span>
 									</a>
 								</div>

@@ -1411,10 +1411,10 @@
 								selectedGreeting = g;
 								switchMode('greetings');
 							}}
-							class="border px-2.5 py-1.5 text-left font-mono-tech text-xs truncate transition-colors duration-500 cursor-pointer {selectedGreeting.id ===
+							class="border px-1.5 py-1.5 text-center font-mono-tech text-[11px] whitespace-nowrap transition-colors duration-500 cursor-pointer {selectedGreeting.id ===
 							g.id
 								? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
-								: 'border-[#E8E6E1]/12 bg-transparent text-[#E8E6E1]/65 hover:border-[#E8E6E1]/30 hover:text-[#E8E6E1]'}"
+								: 'border-[#E8E6E1]/12 bg-transparent text-[#E8E6E1]/72 hover:border-[#E8E6E1]/30 hover:text-[#E8E6E1]'}"
 						>
 							{g.language}
 						</button>
@@ -1448,7 +1448,7 @@
 					<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#E8E6E1]/44">27 MASTERWORKS</span>
 				</div>
 
-				<div class="mt-2.5 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+				<div class="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
 					{#each MUSIC_TRACKS as track}
 						<button
 							type="button"
@@ -1456,15 +1456,15 @@
 								selectedTrack = track;
 								switchMode('music');
 							}}
-							class="border px-2.5 py-1.5 text-left transition-colors duration-500 cursor-pointer {selectedTrack.id ===
+							class="border px-2.5 py-2 text-left transition-colors duration-500 cursor-pointer {selectedTrack.id ===
 							track.id
 								? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
-								: 'border-[#E8E6E1]/12 bg-transparent text-[#E8E6E1]/68 hover:border-[#E8E6E1]/30 hover:text-[#E8E6E1]'}"
+								: 'border-[#E8E6E1]/12 bg-transparent text-[#E8E6E1]/72 hover:border-[#E8E6E1]/30 hover:text-[#E8E6E1]'}"
 						>
-							<div class="truncate font-mono-tech text-[11px]">
+							<div class="font-mono-tech text-[11px] leading-snug">
 								{track.composerOrArtist.split('(')[0].trim()}
 							</div>
-							<div class="truncate text-[10px] text-[#E8E6E1]/48">{track.title}</div>
+							<div class="mt-0.5 text-[10px] leading-snug text-[#E8E6E1]/58">{track.title}</div>
 						</button>
 					{/each}
 				</div>

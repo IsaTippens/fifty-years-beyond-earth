@@ -221,14 +221,14 @@ body {
 	position: fixed;
 	inset: 0;
 	pointer-events: none;
-	z-index: 49;
+	z-index: 2;
 	background: var(
 		--vignette-gradient,
 		radial-gradient(
 			ellipse at 50% 50%,
-			transparent 52%,
-			rgba(5, 6, 7, 0.55) 84%,
-			rgba(5, 6, 7, 0.92) 100%
+			transparent 68%,
+			rgba(5, 6, 7, 0.24) 88%,
+			rgba(5, 6, 7, 0.52) 100%
 		)
 	);
 }

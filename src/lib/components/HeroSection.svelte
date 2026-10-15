@@ -75,14 +75,14 @@
 				alt="Earth's atmospheric limb and airglow at orbital sunset photographed from the International Space Station"
 				fetchpriority="high"
 				decoding="async"
-				class="hero-ken-burns h-full w-full object-cover object-center opacity-28 mix-blend-screen"
-				style="filter: grayscale(28%) contrast(1.08);"
+				class="hero-ken-burns h-full w-full object-cover object-center opacity-48 mix-blend-screen"
+				style="filter: saturate(0.88) contrast(1.12) brightness(1.10);"
 			/>
 		</picture>
 		<!-- Multi-Stop Dark Documentary Gradient Scrim -->
 		<div
 			class="absolute inset-0"
-			style="background: linear-gradient(180deg, rgba(5,6,7,0.88) 0%, rgba(5,6,7,0.52) 45%, rgba(5,6,7,0.92) 100%);"
+			style="background: linear-gradient(180deg, rgba(5,6,7,0.78) 0%, rgba(5,6,7,0.34) 45%, rgba(5,6,7,0.88) 100%);"
 		></div>
 	</div>
 
@@ -123,7 +123,8 @@
 		<!-- Clean Inter Editorial Lead Paragraph Sitting Directly on the Void -->
 		<div class="line-reveal-mask mt-5 sm:mt-10">
 			<p
-				class="font-sans text-base sm:text-lg md:text-xl max-w-[58ch] leading-[1.65] text-[#E8E6E1]/80 animate-[maskedLineRise_1s_cubic-bezier(0.16,1,0.3,1)_0.36s_both]"
+				class="font-sans text-base sm:text-lg md:text-xl max-w-[58ch] leading-[1.65] text-[#F2F0EC]/95 animate-[maskedLineRise_1s_cubic-bezier(0.16,1,0.3,1)_0.36s_both]"
+				style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.96), 0 2px 24px rgba(5, 6, 7, 0.92);"
 			>
 				From a Cold War handshake <span class="text-[#C89B57]">222 kilometers</span> above the
 				Atlantic to a lonely golden phonograph record racing past

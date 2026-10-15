@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
 	import gsap from 'gsap';
-	import type { ChapterData, MilestoneData } from '$lib/data/missions';
+	import {
+		getPublicationLabel,
+		SOURCE_BY_URL,
+		type ChapterData,
+		type MilestoneData
+	} from '$lib/data/missions';
 	import { CHAPTER_ART_BY_ID } from '$lib/data/assets';
 	import GoldenRecordWidget from './GoldenRecordWidget.svelte';
 
@@ -75,26 +80,32 @@
 		return `${mins}m ${secs}s OWLT`;
 	}
 
-	function extractDistinctLabel(url: string, sIdx: number, allUrls?: string[]): string {
-		try {
-			const u = new URL(url);
-			const host = u.hostname.replace(/^www\d*\./, '');
-			const segments = u.pathname
-				.split('/')
-				.map((s) => s.replace(/\.(html?|pdf)$/i, '').trim())
-				.filter(Boolean);
-			if (segments.length === 0) {
-				return allUrls && allUrls.filter((x) => x.includes(host)).length > 1
-					? `${host}#${sIdx + 1}`
-					: host;
-			}
-			const tail = segments[segments.length - 1].slice(0, 22).replace(/-+$/, '');
-			const parent =
-				segments.length > 1 ? `${segments[segments.length - 2].slice(0, 12).replace(/-+$/, '')}/` : '';
-			return `${host}/${parent}${tail}`;
-		} catch {
-			return `source-${sIdx + 1}`;
+	function getChapterBackdropFilter(chapterId: string): string {
+		if (chapterId === 'epilogue') {
+			return 'filter: saturate(1.06) contrast(1.24) brightness(1.08); object-position: 56% 48%;';
 		}
+		if (chapterId === 'ch3-long-reach') {
+			return 'filter: saturate(0.96) contrast(1.15) brightness(0.90); object-position: 64% 46%;';
+		}
+		if (chapterId === 'prologue') {
+			return 'filter: saturate(0.94) contrast(1.15) brightness(0.90); object-position: 58% 48%;';
+		}
+		if (chapterId === 'ch4-reusable-revolution') {
+			return 'filter: saturate(0.95) contrast(1.14) brightness(0.88); object-position: 62% 48%;';
+		}
+		return 'filter: saturate(0.92) contrast(1.12) brightness(0.84); object-position: center;';
+	}
+
+	function getChapterBackdropScrim(chapterId: string): string {
+		const localizedProseScrim =
+			'radial-gradient(ellipse 66% 72% at 34% 48%, rgba(5, 6, 7, 0.82) 0%, rgba(5, 6, 7, 0.62) 50%, rgba(5, 6, 7, 0.22) 78%, rgba(5, 6, 7, 0) 100%)';
+		if (chapterId === 'epilogue') {
+			return `background: ${localizedProseScrim}, radial-gradient(ellipse 96% 88% at 64% 48%, rgba(5, 6, 7, 0.02) 0%, rgba(5, 6, 7, 0.22) 74%, rgba(5, 6, 7, 0.78) 100%), linear-gradient(180deg, #050607 0%, rgba(5, 6, 7, 0.06) 14%, rgba(5, 6, 7, 0.10) 86%, #050607 100%);`;
+		}
+		if (chapterId === 'ch3-long-reach') {
+			return `background: ${localizedProseScrim}, radial-gradient(ellipse 94% 86% at 68% 46%, rgba(5, 6, 7, 0.03) 0%, rgba(5, 6, 7, 0.28) 74%, rgba(5, 6, 7, 0.82) 100%), linear-gradient(180deg, #050607 0%, rgba(5, 6, 7, 0.08) 14%, rgba(5, 6, 7, 0.12) 86%, #050607 100%);`;
+		}
+		return `background: ${localizedProseScrim}, radial-gradient(ellipse 94% 86% at 68% 46%, rgba(5, 6, 7, 0.04) 0%, rgba(5, 6, 7, 0.32) 74%, rgba(5, 6, 7, 0.84) 100%), linear-gradient(180deg, #050607 0%, rgba(5, 6, 7, 0.10) 15%, rgba(5, 6, 7, 0.14) 85%, #050607 100%);`;
 	}
 
 	function resolveSchematicKind(m: MilestoneData): string {
@@ -180,11 +191,11 @@
 	class="relative w-full border-t border-[#E8E6E1]/10 scroll-mt-20"
 >
 	<!-- ====================================================================== -->
-	<!-- FULL-BLEED CHAPTER OPENER (min-h-screen)                               -->
+	<!-- FULL-BLEED CHAPTER OPENER                                              -->
 	<!-- ====================================================================== -->
 	<div
 		bind:this={openerRef}
-		class="relative min-h-[68vh] md:min-h-screen w-full overflow-hidden flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-12 md:py-28"
+		class="relative min-h-[58vh] md:min-h-[78vh] w-full overflow-hidden flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-9 md:py-16"
 	>
 		{#if chapterArt && chapterArtBase}
 			<div class="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -202,37 +213,38 @@
 					<img
 						src={`${chapterArtBase}-1600.webp`}
 						alt={chapterArt.caption || chapterArt.title}
-						loading="lazy"
+						loading={index === 0 ? 'eager' : 'lazy'}
 						decoding="async"
-						class="chapter-ken-burns h-full w-full object-cover object-center"
-						style="filter: saturate(0.68) contrast(1.08) brightness(0.58);"
+						class="chapter-ken-burns h-full w-full object-cover"
+						style={getChapterBackdropFilter(chapter.chapterId)}
 					/>
 				</picture>
-				<!-- Rich Dark Documentary Scrim (radial-gradient + linear-gradient to #050607 at top, left, and bottom) -->
+				<!-- Lifted Documentary Edge Scrim (preserves bright photograph presence while blending top/bottom edges) -->
 				<div
 					class="absolute inset-0"
-					style="background: radial-gradient(ellipse 90% 80% at 68% 42%, rgba(5, 6, 7, 0.28) 0%, rgba(5, 6, 7, 0.78) 72%, #050607 100%), linear-gradient(90deg, rgba(5, 6, 7, 0.90) 0%, rgba(5, 6, 7, 0.56) 52%, rgba(5, 6, 7, 0.34) 100%), linear-gradient(180deg, #050607 0%, rgba(5, 6, 7, 0.36) 24%, rgba(5, 6, 7, 0.44) 74%, #050607 100%);"
+					style={getChapterBackdropScrim(chapter.chapterId)}
 				></div>
 			</div>
 		{/if}
 		<div class="relative z-10 mx-auto w-full max-w-5xl">
 			<!-- Small Tracked-Out Monospace Telemetry Header -->
 			<div
-				class="kinetic-item font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/60"
+				class="kinetic-item font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/85"
+				style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.95);"
 			>
 				<span>{chapter.chapterNumber}</span>
-				<span class="mx-2 text-[#E8E6E1]/30">·</span>
-				<span class="text-[#C89B57]">{chapter.yearRange}</span>
-				<span class="mx-2 text-[#E8E6E1]/30">·</span>
+				<span class="mx-2 text-[#E8E6E1]/45">·</span>
+				<span class="text-[#DDB474]">{chapter.yearRange}</span>
+				<span class="mx-2 text-[#E8E6E1]/45">·</span>
 				<span>VOYAGER 1: {chapter.voyagerDistanceRangeLabel}</span>
-				<span class="hidden sm:inline mx-2 text-[#E8E6E1]/30">·</span>
+				<span class="hidden sm:inline mx-2 text-[#E8E6E1]/45">·</span>
 				<span class="hidden sm:inline">OWLT: {chapter.voyagerLightTime}</span>
 			</div>
 
 			<!-- Enormous Fraunces Chapter Title with Masked Rise -->
 			<h2
-				class="mt-3 md:mt-5 font-display font-normal text-[#E8E6E1] overflow-hidden pb-1.5 break-words"
-				style="font-size: clamp(2.15rem, 8vw, 7.5rem); line-height: 0.94; letter-spacing: -0.03em; text-shadow: 0 2px 32px rgba(5, 6, 7, 0.9);"
+				class="mt-3 md:mt-5 font-display font-normal text-[#F5F3EE] overflow-hidden pb-1.5 break-words"
+				style="font-size: clamp(2.15rem, 8vw, 7.5rem); line-height: 0.94; letter-spacing: -0.03em; text-shadow: 0 2px 32px rgba(5, 6, 7, 0.96), 0 1px 8px rgba(5, 6, 7, 0.92);"
 			>
 				<span
 					class="kinetic-title-line block transition-transform duration-[950ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
@@ -243,24 +255,25 @@
 
 			<!-- Editorial Subtitle -->
 			<p
-				class="kinetic-item mt-2.5 md:mt-4 font-display italic font-light text-lg sm:text-xl md:text-2xl text-[#C89B57] max-w-[54ch]"
-				style="text-shadow: 0 2px 24px rgba(5, 6, 7, 0.9);"
+				class="kinetic-item mt-2.5 md:mt-4 font-display italic font-light text-lg sm:text-xl md:text-2xl text-[#DDB474] max-w-[54ch]"
+				style="text-shadow: 0 2px 24px rgba(5, 6, 7, 0.96), 0 1px 6px rgba(5, 6, 7, 0.92);"
 			>
 				{chapter.subtitle}
 			</p>
 
-			<!-- Opening Prose Sitting Directly on the Void -->
+			<!-- Opening Prose with High-Contrast Arm's-Length Legibility -->
 			<p
-				class="kinetic-item mt-5 md:mt-10 max-w-[62ch] font-sans text-[16px] sm:text-lg md:text-xl leading-[1.62] md:leading-[1.68] text-[#E8E6E1]/88 font-normal"
-				style="text-shadow: 0 2px 24px rgba(5, 6, 7, 0.9);"
+				class="kinetic-item mt-5 md:mt-10 max-w-[62ch] font-sans text-[16px] sm:text-lg md:text-xl leading-[1.64] md:leading-[1.7] text-[#F2F0EC] font-normal"
+				style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.98), 0 2px 28px rgba(5, 6, 7, 0.95);"
 			>
 				{chapter.openingProse}
 			</p>
 
 			<!-- Milestones as a Tight Single-Column Editorial Index -->
-			<div class="kinetic-item mt-6 md:mt-14 pt-4 md:pt-8 border-t border-[#E8E6E1]/12 max-w-4xl">
+			<div class="kinetic-item mt-6 md:mt-14 pt-4 md:pt-8 border-t border-[#E8E6E1]/18 max-w-4xl">
 				<div
-					class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/60 mb-2.5 md:mb-5"
+					class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/80 mb-2.5 md:mb-5"
+					style="text-shadow: 0 1px 10px rgba(5, 6, 7, 0.95);"
 				>
 					CHRONICLE INDEX — EPOCH {String(index + 1).padStart(2, '0')} ({chapter.milestones.length} MILESTONES)
 				</div>
@@ -269,27 +282,27 @@
 						<li>
 							<a
 								href={`#${m.id}`}
-								class="group flex items-baseline justify-between gap-3 py-1.5 sm:py-2 leading-tight transition-colors duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#E8E6E1]/[0.02]"
+								class="group flex items-baseline justify-between gap-3 py-1.5 sm:py-2 leading-snug transition-colors duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#E8E6E1]/[0.02]"
 							>
 								<div class="flex items-baseline gap-3 sm:gap-5 min-w-0">
 									<span
-										class="font-mono-tech text-[11px] tracking-[0.16em] text-[#E8E6E1]/44 w-5 shrink-0"
+										class="font-mono-tech text-[11px] tracking-[0.16em] text-[#E8E6E1]/68 w-5 shrink-0"
 									>
 										{String(mIdx + 1).padStart(2, '0')}
 									</span>
 									<span
-										class="font-mono-tech text-xs tracking-[0.12em] text-[#C89B57] w-11 shrink-0"
+										class="font-mono-tech text-xs tracking-[0.12em] text-[#DDB474] w-11 shrink-0"
 									>
 										{m.year}
 									</span>
 									<span
-										class="font-display text-base sm:text-lg text-[#E8E6E1] group-hover:text-[#DDB474] transition-colors duration-500 truncate"
+										class="font-display text-base sm:text-lg text-[#F2F0EC] group-hover:text-[#DDB474] transition-colors duration-500 leading-snug"
 									>
 										{m.title}
 									</span>
 								</div>
 								<span
-									class="hidden md:inline font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/44 shrink-0 group-hover:text-[#C89B57] transition-colors duration-500"
+									class="hidden md:inline font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/68 shrink-0 group-hover:text-[#DDB474] transition-colors duration-500"
 								>
 									{m.agency} ↓
 								</span>
@@ -302,8 +315,8 @@
 
 		{#if chapterArt}
 			<div
-				class="pointer-events-none mt-4 md:mt-0 md:absolute md:bottom-6 md:right-10 lg:right-16 z-10 max-w-[90vw] text-right font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/60"
-				style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.95);"
+				class="pointer-events-none mt-4 md:mt-0 md:absolute md:bottom-6 md:right-10 lg:right-16 z-10 max-w-[90vw] text-right font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/78"
+				style="text-shadow: 0 1px 14px rgba(5, 6, 7, 0.98);"
 			>
 				ARCHIVE PLATE // {chapterArt.archiveId} · {chapterArt.creditLine}
 			</div>
@@ -313,7 +326,7 @@
 	<!-- ====================================================================== -->
 	<!-- FULL-BLEED MILESTONE NARRATIVE STREAM                                  -->
 	<!-- ====================================================================== -->
-	<div class="relative z-10 mx-auto max-w-5xl px-6 sm:px-10 lg:px-16 pb-10 md:pb-24">
+	<div class="relative z-10 mx-auto max-w-5xl px-6 sm:px-10 lg:px-16 pb-6 md:pb-12">
 		{#each chapter.milestones as milestone, mIndex (milestone.id)}
 			{@const schematic = resolveSchematicKind(milestone)}
 			{@const isDeepDiveOpen = !!expandedDeepDives[milestone.id]}
@@ -321,7 +334,7 @@
 				id={milestone.id}
 				data-milestone-id={milestone.id}
 				data-chapter-id={chapter.chapterId}
-				class="relative py-9 md:py-24 border-t border-[#E8E6E1]/10 scroll-mt-24"
+				class="relative py-8 md:py-16 last:pb-6 md:last:pb-10 border-t border-[#E8E6E1]/10 scroll-mt-24"
 			>
 				<!-- 1. Editorial Milestone Header -->
 				<header class="max-w-4xl">
@@ -934,10 +947,10 @@
 							<!-- Target Mission Regime Node -->
 							<circle cx="725" cy="110" r="11" fill="#050607" stroke="#C89B57" stroke-width="1.6" />
 							<circle cx="725" cy="110" r="3.5" fill="#C89B57" />
-							<text x="530" y="148" fill="#E8E6E1" font-family="monospace" font-size="9.5">
-								TARGET: {milestone.locationOrOrbit.slice(0, 34)}
+							<text x="775" y="148" text-anchor="end" fill="#E8E6E1" font-family="monospace" font-size="9.5">
+								TARGET: {milestone.locationOrOrbit.split('(')[0].trim()}
 							</text>
-							<text x="530" y="164" fill="rgba(232,230,225,0.55)" font-family="monospace" font-size="8.5">
+							<text x="775" y="164" text-anchor="end" fill="rgba(232,230,225,0.55)" font-family="monospace" font-size="8.5">
 								RANGE: {formatDistanceKm(milestone.distanceFromEarthKm)}
 							</text>
 						</svg>
@@ -947,8 +960,8 @@
 				<!-- 3. Editorial Body Prose Directly on the Void -->
 				<div class="mt-4 md:mt-8">
 					<p
-						class="max-w-[65ch] font-sans text-base sm:text-[17px] leading-[1.65] text-[#E8E6E1]/85 font-normal"
-						style="text-shadow: 0 2px 20px rgba(5, 6, 7, 0.85);"
+						class="max-w-[65ch] font-sans text-base sm:text-[17px] leading-[1.65] text-[#E8E6E1]/92 font-normal"
+						style="text-shadow: 0 2px 20px rgba(5, 6, 7, 0.9);"
 					>
 						{milestone.summary}
 					</p>
@@ -1032,11 +1045,11 @@
 						{#each milestone.keyStats as stat, sIdx}
 							<div class="{sIdx >= 4 ? 'hidden lg:flex' : 'flex'} flex-col">
 								<div
-									class="flex items-baseline justify-between gap-2 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/60"
+									class="flex items-start justify-between gap-2 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/68"
 								>
-									<span class="truncate">{stat.label}</span>
+									<span class="leading-snug">{stat.label}</span>
 									{#if stat.unit}
-										<span class="text-[10px] text-[#E8E6E1]/40 shrink-0">{stat.unit}</span>
+										<span class="text-[10px] text-[#E8E6E1]/44 shrink-0">{stat.unit}</span>
 									{/if}
 								</div>
 								<div
@@ -1048,7 +1061,7 @@
 									{stat.value}
 								</div>
 								{#if stat.description}
-									<div class="mt-1 font-sans text-xs text-[#E8E6E1]/48 leading-snug line-clamp-2 md:line-clamp-none">
+									<div class="mt-1 font-sans text-xs text-[#E8E6E1]/58 leading-snug">
 										{stat.description}
 									</div>
 								{/if}
@@ -1068,10 +1081,11 @@
 								href={url}
 								target="_blank"
 								rel="noopener noreferrer"
-								class="inline-flex items-center gap-1.5 font-mono-tech text-[11px] tracking-[0.06em] text-[#E8E6E1]/65 transition-colors duration-500 hover:text-[#C89B57]"
+								title={SOURCE_BY_URL[url]?.title ?? url}
+								class="inline-flex items-center gap-1.5 font-mono-tech text-[11px] tracking-[0.06em] text-[#E8E6E1]/72 transition-colors duration-500 hover:text-[#C89B57]"
 							>
 								<span class="text-[#C89B57]">[{String(sIdx + 1).padStart(2, '0')}]</span>
-								<span>{extractDistinctLabel(url, sIdx, milestone.sourceUrls)}</span>
+								<span>{getPublicationLabel(url)}</span>
 								<span class="text-[10px] opacity-60">↗</span>
 							</a>
 						{/each}

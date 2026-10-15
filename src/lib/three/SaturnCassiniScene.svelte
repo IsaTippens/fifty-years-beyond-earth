@@ -1234,14 +1234,14 @@
 
 <section
 	aria-label="Interactive 3D Set Piece: Saturn's Rings as Cassini-Huygens Arrives"
-	class="relative my-8 md:my-16 overflow-hidden border-y border-[rgba(232,230,225,0.12)] bg-[#050607]"
+	class="relative my-6 md:my-10 overflow-hidden border-y border-[rgba(232,230,225,0.12)] bg-[#050607]"
 >
 	{#if mobileLiteMode}
 		<!-- Lightweight Mobile Documentary Plate (~420px total height) -->
 		<div class="flex flex-col bg-[#050607]" data-testid="saturn-mobile-lite">
 			<!-- Compact Top Bar with On-Demand 3D WebGL Toggle -->
 			<div class="flex items-center justify-between gap-2 border-b border-[rgba(232,230,225,0.12)] px-4 py-2.5">
-				<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57] truncate">
+				<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57]">
 					SET PIECE 01 · CASSINI–HUYGENS
 				</span>
 				<button
@@ -1260,11 +1260,12 @@
 					alt="Cassini wide-angle mosaic of Saturn eclipsing the Sun, illuminating the E, F, G, and main ring system"
 					loading="lazy"
 					decoding="async"
-					class="saturn-ken-burns pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-55"
+					class="saturn-ken-burns pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-80"
+					style="filter: saturate(1.05) contrast(1.22) brightness(1.12);"
 				/>
 				<div
 					class="pointer-events-none absolute inset-0"
-					style="background: linear-gradient(180deg, rgba(5,6,7,0.35) 0%, rgba(5,6,7,0.78) 55%, rgba(5,6,7,0.96) 100%);"
+					style="background: linear-gradient(180deg, rgba(5,6,7,0.18) 0%, rgba(5,6,7,0.62) 58%, rgba(5,6,7,0.92) 100%);"
 				></div>
 
 				<div class="relative z-10">
@@ -1314,7 +1315,7 @@
 						<div class="font-mono-tech text-[10px] uppercase tracking-[0.12em] {isActive ? 'text-[#C89B57]' : 'text-[rgba(232,230,225,0.55)]'}">
 							{preset.indexLabel}
 						</div>
-						<div class="mt-0.5 truncate font-sans text-xs font-medium">
+						<div class="mt-0.5 font-sans text-[11px] leading-snug font-medium">
 							{preset.shortLabel.split(' ')[0]}
 						</div>
 					</button>
@@ -1354,11 +1355,11 @@
 	<!-- Main Responsive 3D WebGL Viewport Container -->
 	<div
 		bind:this={containerEl}
-		class="relative min-h-[560px] w-full select-none overflow-hidden lg:min-h-[660px]"
+		class="relative h-[520px] w-full select-none overflow-hidden lg:h-[620px]"
 	>
 		<canvas
 			bind:this={canvasEl}
-			class="block h-full min-h-[560px] w-full cursor-grab active:cursor-grabbing lg:min-h-[660px]"
+			class="block h-full w-full cursor-grab active:cursor-grabbing"
 		></canvas>
 
 		<!-- Upper-Left Active Preset Editorial Caption -->
@@ -1366,7 +1367,7 @@
 			class="pointer-events-none absolute top-4 left-4 right-4 sm:right-auto z-10 sm:max-w-lg border-l border-[rgba(232,230,225,0.18)] bg-[rgba(5,6,7,0.78)] pl-4 pr-4 py-3 backdrop-blur-sm sm:top-6 sm:left-6"
 		>
 			<div class="mb-1 flex items-center justify-between gap-3">
-				<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57] truncate">
+				<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57]">
 					{activePreset.missionPhase}
 				</span>
 				<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)] shrink-0">
@@ -1463,7 +1464,7 @@
 							{/if}
 						</div>
 						<div
-							class="mt-1 truncate font-display text-sm font-normal {isActive
+							class="mt-1 font-display text-sm font-normal leading-snug {isActive
 								? 'text-[#E8E6E1]'
 								: 'text-[rgba(232,230,225,0.72)]'}"
 						>
@@ -1503,9 +1504,9 @@
 				oninput={handlePhaseSliderInput}
 				class="h-1 w-full cursor-pointer appearance-none bg-[rgba(232,230,225,0.16)] accent-[#C89B57]"
 			/>
-			<div class="mt-1.5 flex justify-between font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
+			<div class="mt-1.5 flex flex-wrap justify-between gap-2 font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
 				<span>8° BACK-SCATTER</span>
-				<span class="text-[#C89B57] truncate max-w-[220px]">{scatteringRegimeLabel}</span>
+				<span class="text-[#C89B57] text-center">{scatteringRegimeLabel}</span>
 				<span>174° FORWARD HALO</span>
 			</div>
 		</div>

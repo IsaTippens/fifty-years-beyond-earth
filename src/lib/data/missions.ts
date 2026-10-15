@@ -2653,71 +2653,67 @@ export const ALL_SOURCES: SourceEntry[] = [
 	}
 ];
 
-const SOURCE_BY_URL: Record<string, SourceEntry> = Object.fromEntries(
+export const SOURCE_BY_URL: Record<string, SourceEntry> = Object.fromEntries(
 	ALL_SOURCES.map((s) => [s.url, s])
 );
 
-function formatDistinctSourceLabel(
-	url: string,
-	src: SourceEntry | undefined,
-	usedLabels: Set<string>
-): string {
-	let base = src?.publisher
-		? src.publisher
-				.replace(/European Space Agency \(ESA\)/i, 'ESA')
-				.replace(/European Southern Observatory \(ESO\)/i, 'ESO')
-				.replace(/Japan Aerospace Exploration Agency \(JAXA\)/i, 'JAXA')
-				.replace(/NASA Jet Propulsion Laboratory \(JPL\)|NASA Jet Propulsion Laboratory/i, 'NASA JPL')
-				.replace(/NASA Exoplanet Science Institute \/ IPAC \/ Caltech/i, 'Caltech / IPAC')
-				.replace(/Johns Hopkins University Applied Physics Laboratory \(JHUAPL\)|Johns Hopkins Applied Physics Laboratory/i, 'JHUAPL')
-				.replace(/LIGO Scientific Collaboration and Virgo Collaboration/i, 'LIGO / PRL')
-				.trim()
-		: '';
+export function getPublicationLabel(url: string): string {
+	const src = SOURCE_BY_URL[url];
+	if (url.includes('sci.esa.int')) return 'ESA Science & Technology';
+	if (url.includes('esawebb.org')) return 'ESA / Webb';
+	if (url.includes('esa.int')) return 'European Space Agency';
+	if (url.includes('nasa.gov/history')) return 'NASA History';
+	if (url.includes('science.nasa.gov/astrobiology')) return 'NASA Astrobiology';
+	if (url.includes('photojournal.jpl.nasa.gov') || url.includes('science.nasa.gov/photojournal')) {
+		return 'NASA / JPL Photojournal';
+	}
+	if (url.includes('images.nasa.gov')) return 'NASA Image Library';
+	if (url.includes('visibleearth.nasa.gov')) return 'NASA Visible Earth';
+	if (url.includes('svs.gsfc.nasa.gov')) return 'NASA Scientific Visualization Studio';
+	if (url.includes('exoplanetarchive.ipac.caltech.edu')) return 'NASA Exoplanet Archive';
+	if (url.includes('stsci.edu')) return 'Space Telescope Science Institute';
+	if (url.includes('eso.org')) return 'European Southern Observatory';
+	if (url.includes('global.jaxa.jp')) return 'JAXA';
+	if (url.includes('planetary.org')) return 'The Planetary Society';
+	if (url.includes('news.mit.edu')) return 'MIT News Office';
+	if (url.includes('lroc.im-ldi.com')) return 'NASA / LROC';
+	if (url.includes('arxiv.org/abs/1602.03837')) return 'LIGO / Physical Review Letters';
+	if (url.includes('arxiv.org')) return 'Nature / arXiv';
+	if (url.includes('pubmed.ncbi.nlm.nih.gov')) return 'Nature / PubMed';
 
-	if (!base) {
-		try {
-			base = new URL(url).hostname.replace(/^www\./, '');
-		} catch {
-			base = 'Archive';
-		}
+	if (src?.publisher) {
+		return src.publisher
+			.replace(/European Space Agency \(ESA\)/i, 'European Space Agency')
+			.replace(/European Southern Observatory \(ESO\)/i, 'European Southern Observatory')
+			.replace(/Japan Aerospace Exploration Agency \(JAXA\)/i, 'JAXA')
+			.replace(/Space Telescope Science Institute \(STScI\)/i, 'Space Telescope Science Institute')
+			.replace(/NASA Exoplanet Science Institute \/ IPAC \/ Caltech/i, 'NASA Exoplanet Archive')
+			.replace(/LIGO Scientific Collaboration and Virgo Collaboration/i, 'LIGO / Physical Review Letters')
+			.replace(/NASA Science Planetary Science Division \/ Johns Hopkins APL/i, 'NASA Science / JHUAPL')
+			.replace(/NASA Science \/ Johns Hopkins Applied Physics Laboratory/i, 'NASA Science / JHUAPL')
+			.replace(/NASA Science Planetary Science Division/i, 'NASA Planetary Science')
+			.replace(/NASA Goddard Space Flight Center \/ NASA Astrophysics/i, 'NASA Goddard / Astrophysics')
+			.replace(/NASA Jet Propulsion Laboratory \/ Deep Space Network/i, 'NASA JPL / Deep Space Network')
+			.replace(/NASA Jet Propulsion Laboratory \/ NASA Science|NASA Science \/ Jet Propulsion Laboratory/i, 'NASA Science / JPL')
+			.replace(/NASA Jet Propulsion Laboratory \/ Heliophysics/i, 'NASA JPL / Heliophysics')
+			.replace(/NASA \/ JPL-Caltech \/ Palomar Observatory/i, 'NASA / JPL-Caltech')
+			.replace(/NASA \/ LROC \/ Arizona State University/i, 'NASA / LROC')
+			.replace(/NASA Jet Propulsion Laboratory \(JPL\)|NASA Jet Propulsion Laboratory|NASA \/ Jet Propulsion Laboratory/i, 'NASA JPL')
+			.replace(/NASA History Division/i, 'NASA History')
+			.trim();
 	}
 
-	if (!usedLabels.has(base)) {
-		usedLabels.add(base);
-		return base;
-	}
-
-	// Disambiguate sibling links from the same publisher using URL slug or domain
-	try {
-		const parsed = new URL(url);
-		const host = parsed.hostname.replace(/^www\./, '');
-		const segments = parsed.pathname.split('/').filter(Boolean);
-		const rawSlug = (segments[segments.length - 1] || host).replace(/\.(html?|pdf)$/i, '');
-		const words = rawSlug.split(/[-_]+/).filter(Boolean).slice(0, 2);
-		const slug = words.join(' ');
-		const candidate = slug ? `${base} (${slug})` : `${base} · ${host}`;
-		if (!usedLabels.has(candidate)) {
-			usedLabels.add(candidate);
-			return candidate;
-		}
-	} catch {
-		// fallback index
-	}
-
-	let idx = 2;
-	while (usedLabels.has(`${base} #${idx}`)) idx++;
-	const numbered = `${base} #${idx}`;
-	usedLabels.add(numbered);
-	return numbered;
+	if (url.includes('jpl.nasa.gov')) return 'NASA JPL';
+	if (url.includes('science.nasa.gov')) return 'NASA Science';
+	if (url.includes('nasa.gov')) return 'NASA';
+	return 'Primary Archive';
 }
-
 export const CHAPTER_REFERENCES: ChapterReferenceGroup[] = CHAPTERS.map((chapter) => {
 	const milestones: MilestoneReferenceEntry[] = chapter.milestones.map((m) => {
-		const usedLabels = new Set<string>();
 		const uniqueUrls = Array.from(new Set(m.sourceUrls));
 		const sources: MilestoneSourceLink[] = uniqueUrls.map((url, idx) => {
 			const matched = SOURCE_BY_URL[url];
-			const label = formatDistinctSourceLabel(url, matched, usedLabels);
+			const label = getPublicationLabel(url);
 			return {
 				id: matched?.id ?? `${m.id}-src-${idx + 1}`,
 				label,

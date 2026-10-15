@@ -1311,7 +1311,7 @@
 </script>
 
 <section
-	class="relative my-8 md:my-16 overflow-hidden border-y border-[rgba(232,230,225,0.12)] bg-[#050607] py-4 md:py-10 px-4 sm:px-6 lg:px-8"
+	class="relative my-6 md:my-10 overflow-hidden border-y border-[rgba(232,230,225,0.12)] bg-[#050607] py-4 md:py-8 px-4 sm:px-6 lg:px-8"
 	aria-label="Interactive 3D Exoplanet Orrery and JWST Atmospheric Spectrometer"
 >
 	{#if mobileLiteMode}
@@ -1319,7 +1319,7 @@
 		<div class="flex flex-col gap-3" data-testid="orrery-mobile-lite">
 			<!-- Top Header & Enable 3D Button -->
 			<div class="flex items-center justify-between gap-2 border-b border-[rgba(232,230,225,0.12)] pb-2.5">
-				<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57] truncate">
+				<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57]">
 					SET PIECE 02 · {EXOPLANET_CENSUS.confirmedPlanets.toLocaleString()}+ WORLDS
 				</span>
 				<button
@@ -1344,7 +1344,7 @@
 							? 'bg-[rgba(200,155,87,0.14)] text-[#E8E6E1]'
 							: 'text-[rgba(232,230,225,0.68)]'}"
 					>
-						<span class="block truncate font-mono-tech text-[10px] uppercase tracking-[0.08em] {active ? 'text-[#C89B57]' : ''}">
+						<span class="block font-mono-tech text-[10px] uppercase tracking-[0.06em] leading-snug {active ? 'text-[#C89B57]' : ''}">
 							{sys.shortLabel}
 						</span>
 					</button>
@@ -1399,7 +1399,7 @@
 						{selectedPlanet.inHabitableZone ? '● HABITABLE ZONE' : selectedPlanet.discoveryMethod.split('(')[0]}
 					</span>
 				</div>
-				<p class="mt-0.5 font-sans text-base leading-[1.45] text-[rgba(232,230,225,0.78)] line-clamp-2">
+				<p class="mt-0.5 font-sans text-base leading-[1.45] text-[rgba(232,230,225,0.78)]">
 					{selectedPlanet.subtitle}
 				</p>
 			</div>
@@ -1426,9 +1426,9 @@
 
 			<!-- Compact JWST Transmission Spectrum Strip -->
 			<div class="border border-[rgba(232,230,225,0.12)] bg-[#050607] px-3 py-2">
-				<div class="mb-1 flex items-center justify-between gap-2 font-mono-tech text-[10px] uppercase tracking-[0.12em]">
+				<div class="mb-1 flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[10px] uppercase tracking-[0.12em]">
 					<span class="text-[#C89B57]">JWST NIRSPEC SPECTRUM (0.6–5.3 μm)</span>
-					<span class="text-[rgba(232,230,225,0.68)] truncate">
+					<span class="text-[rgba(232,230,225,0.68)]">
 						{selectedPlanet.spectralFeatures.slice(0, 3).map((f) => `${f.molecule} ${f.wavelengthUm}μm`).join(' · ')}
 					</span>
 				</div>
@@ -1765,29 +1765,119 @@
 						<button
 							type="button"
 							onclick={() => (selectedPlanetId = planet.id)}
-							class="cursor-pointer flex items-baseline justify-between gap-3 py-2.5 px-2 text-left transition-colors duration-500 {isSelected
+							class="cursor-pointer flex items-baseline justify-between gap-2 py-2.5 px-2 text-left transition-colors duration-500 {isSelected
 								? 'bg-[rgba(200,155,87,0.10)]'
 								: 'hover:bg-[rgba(232,230,225,0.03)]'}"
 						>
-							<div class="flex items-baseline gap-2.5 min-w-0">
+							<div class="flex flex-wrap items-baseline gap-2">
 								<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57]">
 									{String(idx + 1).padStart(2, '0')}
 								</span>
-								<span class="font-display text-base font-normal text-[#E8E6E1] truncate">
+								<span class="font-display text-base font-normal text-[#E8E6E1] whitespace-nowrap">
 									{planet.name}
 								</span>
 								{#if planet.inHabitableZone}
-									<span class="font-mono-tech text-[10px] uppercase tracking-[0.16em] text-[#C89B57]">
+									<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57] whitespace-nowrap">
 										● HZ
 									</span>
 								{/if}
 							</div>
-							<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)] shrink-0">
+							<span class="font-mono-tech text-[11px] uppercase tracking-[0.12em] text-[rgba(232,230,225,0.6)] shrink-0">
 								{planet.semiMajorAxisAu} AU · {planet.orbitalPeriodDays.toFixed(1)}D
 							</span>
 						</button>
 					{/each}
 				</div>
+			</div>
+			<!-- Interactive SVG Transit Photometry Light-Curve -->
+			<div class="border-t border-[rgba(232,230,225,0.12)] pt-4">
+				<div class="mb-2.5 flex items-baseline justify-between gap-2">
+					<div>
+						<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
+							KEPLER / TESS / JWST PHOTOMETRY
+						</span>
+						<h5 class="font-display mt-0.5 text-base font-normal text-[#E8E6E1]">
+							Stellar Transit Light-Curve Profile
+						</h5>
+					</div>
+					<div class="text-right font-mono-tech text-[11px] uppercase tracking-[0.16em]">
+						<span class="text-[#C89B57]">
+							ΔF = {selectedPlanet.transitDepthPct.toFixed(4)}%
+						</span>
+						<span class="block text-[rgba(232,230,225,0.6)]">
+							{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM · {selectedPlanet.transitDurationHours}H
+						</span>
+					</div>
+				</div>
+
+				<svg
+					viewBox="0 0 440 128"
+					class="h-28 w-full overflow-visible border border-[rgba(232,230,225,0.12)] bg-[#050607]"
+					role="img"
+					aria-label="Transit Light Curve for {selectedPlanet.name}"
+				>
+					<defs>
+						<linearGradient id="transitFillGrad" x1="0" y1="0" x2="0" y2="1">
+							<stop offset="0%" stop-color="#C89B57" stop-opacity="0.22" />
+							<stop offset="100%" stop-color="#050607" stop-opacity="0.0" />
+						</linearGradient>
+					</defs>
+
+					<!-- Reference Flux = 1.0000 Line -->
+					<line
+						x1="0"
+						y1="26"
+						x2="440"
+						y2="26"
+						stroke="rgba(232, 230, 225, 0.16)"
+						stroke-dasharray="3 3"
+					/>
+					<!-- Ingress / Egress Markers -->
+					<line
+						x1={transitSvg.ingressX}
+						y1="14"
+						x2={transitSvg.ingressX}
+						y2="112"
+						stroke="rgba(232, 230, 225, 0.14)"
+						stroke-dasharray="2 3"
+					/>
+					<line
+						x1={transitSvg.egressX}
+						y1="14"
+						x2={transitSvg.egressX}
+						y2="112"
+						stroke="rgba(232, 230, 225, 0.14)"
+						stroke-dasharray="2 3"
+					/>
+
+					<path d={transitSvg.areaPath} fill="url(#transitFillGrad)" />
+					<path
+						d={transitSvg.linePath}
+						fill="none"
+						stroke="#E8E6E1"
+						stroke-width="1.75"
+						stroke-linecap="round"
+					/>
+
+					<!-- Mid-Transit Depth Annotation -->
+					<circle cx="220" cy={transitSvg.dipBottomY} r="3.5" fill="#C89B57" />
+					<text
+						x="220"
+						y={Math.min(120, transitSvg.dipBottomY + 15)}
+						text-anchor="middle"
+						fill="#C89B57"
+						font-family="var(--font-mono)"
+						font-size="9.5"
+					>
+						MID-TRANSIT −{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM
+					</text>
+					<text x="10" y="18" fill="rgba(232, 230, 225, 0.6)" font-family="var(--font-mono)" font-size="9">
+						FLUX 1.0000
+					</text>
+					<text x="430" y="120" text-anchor="end" fill="rgba(232, 230, 225, 0.44)" font-family="var(--font-mono)" font-size="9">
+						PHASE (−{selectedPlanet.transitDurationHours}H → +{selectedPlanet.transitDurationHours}H)
+					</text>
+				</svg>
 			</div>
 		</div>
 
@@ -1908,96 +1998,6 @@
 				</div>
 			</div>
 
-			<!-- Interactive SVG Transit Photometry Light-Curve -->
-			<div class="border-t border-[rgba(232,230,225,0.12)] pt-4">
-				<div class="mb-2.5 flex items-baseline justify-between gap-2">
-					<div>
-						<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
-							KEPLER / TESS / JWST PHOTOMETRY
-						</span>
-						<h5 class="font-display mt-0.5 text-base font-normal text-[#E8E6E1]">
-							Stellar Transit Light-Curve Profile
-						</h5>
-					</div>
-					<div class="text-right font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-						<span class="text-[#C89B57]">
-							ΔF = {selectedPlanet.transitDepthPct.toFixed(4)}%
-						</span>
-						<span class="block text-[rgba(232,230,225,0.6)]">
-							{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM · {selectedPlanet.transitDurationHours}H
-						</span>
-					</div>
-				</div>
-
-				<svg
-					viewBox="0 0 440 128"
-					class="h-28 w-full overflow-visible border border-[rgba(232,230,225,0.12)] bg-[#050607]"
-					role="img"
-					aria-label="Transit Light Curve for {selectedPlanet.name}"
-				>
-					<defs>
-						<linearGradient id="transitFillGrad" x1="0" y1="0" x2="0" y2="1">
-							<stop offset="0%" stop-color="#C89B57" stop-opacity="0.22" />
-							<stop offset="100%" stop-color="#050607" stop-opacity="0.0" />
-						</linearGradient>
-					</defs>
-
-					<!-- Reference Flux = 1.0000 Line -->
-					<line
-						x1="0"
-						y1="26"
-						x2="440"
-						y2="26"
-						stroke="rgba(232, 230, 225, 0.16)"
-						stroke-dasharray="3 3"
-					/>
-					<!-- Ingress / Egress Markers -->
-					<line
-						x1={transitSvg.ingressX}
-						y1="14"
-						x2={transitSvg.ingressX}
-						y2="112"
-						stroke="rgba(232, 230, 225, 0.14)"
-						stroke-dasharray="2 3"
-					/>
-					<line
-						x1={transitSvg.egressX}
-						y1="14"
-						x2={transitSvg.egressX}
-						y2="112"
-						stroke="rgba(232, 230, 225, 0.14)"
-						stroke-dasharray="2 3"
-					/>
-
-					<path d={transitSvg.areaPath} fill="url(#transitFillGrad)" />
-					<path
-						d={transitSvg.linePath}
-						fill="none"
-						stroke="#E8E6E1"
-						stroke-width="1.75"
-						stroke-linecap="round"
-					/>
-
-					<!-- Mid-Transit Depth Annotation -->
-					<circle cx="220" cy={transitSvg.dipBottomY} r="3.5" fill="#C89B57" />
-					<text
-						x="220"
-						y={Math.min(120, transitSvg.dipBottomY + 15)}
-						text-anchor="middle"
-						fill="#C89B57"
-						font-family="var(--font-mono)"
-						font-size="9.5"
-					>
-						MID-TRANSIT −{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM
-					</text>
-					<text x="10" y="18" fill="rgba(232, 230, 225, 0.6)" font-family="var(--font-mono)" font-size="9">
-						FLUX 1.0000
-					</text>
-					<text x="430" y="120" text-anchor="end" fill="rgba(232, 230, 225, 0.44)" font-family="var(--font-mono)" font-size="9">
-						PHASE (−{selectedPlanet.transitDurationHours}H → +{selectedPlanet.transitDurationHours}H)
-					</text>
-				</svg>
-			</div>
 
 			<!-- Interactive SVG JWST NIRSpec / MIRI Atmospheric Transmission Spectrum -->
 			<div class="border-t border-[rgba(232,230,225,0.12)] pt-4">

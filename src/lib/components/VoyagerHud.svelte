@@ -46,10 +46,10 @@
 
 	const formattedAu = $derived.by(() => {
 		const au = $telemetryStore.voyagerDistanceAu;
-		if (au < 1) {
-			return au.toFixed(6);
+		if (au < 0.1) {
+			return au.toFixed(4);
 		}
-		return au.toFixed(4);
+		return au.toFixed(1);
 	});
 
 	const formattedKmSplit = $derived.by(() => {
@@ -164,7 +164,7 @@
 >
 	<div class="mx-auto max-w-[1440px] px-3 sm:px-8 lg:px-12">
 		<div
-			class="flex items-center justify-between gap-2 sm:gap-4 h-12 sm:h-13 font-mono-tech text-[10px] sm:text-[11px] tracking-[0.10em] sm:tracking-[0.16em] uppercase opacity-75 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-700"
+			class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-0.5 py-1.5 sm:py-0 min-h-11 sm:h-13 font-mono-tech text-[10px] sm:text-[11px] tracking-[0.06em] sm:tracking-[0.16em] uppercase opacity-80 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-700"
 			class:opacity-100={telemetryDrawerOpen}
 		>
 			<!-- 1. Wordmark Button -->
@@ -181,22 +181,22 @@
 			</button>
 
 			<!-- 2. Active Chapter Indicator (Desktop) -->
-			<div class="hidden lg:block text-[#E8E6E1]/72 truncate text-center">
+			<div class="hidden lg:block text-[#E8E6E1]/75 text-center">
 				{activeChapterMeta.chapterNumber} — {activeChapterMeta.title.toUpperCase()}
 			</div>
 
-			<!-- 3. Spatial Scale Readout (folded into mobile top bar) + Live Voyager Readout + [TELEMETRY +] Drawer Toggle -->
-			<div class="flex items-center gap-2.5 sm:gap-5 min-w-0">
+			<!-- 3. Spatial Scale Readout + Live Voyager Readout (Single AU Precision + Region) + [TELEMETRY +] Drawer Toggle -->
+			<div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-5 w-full sm:w-auto min-w-0">
 				<span
-					class="lg:hidden text-[#C89B57] truncate max-w-[115px] sm:max-w-[220px]"
+					class="lg:hidden text-[#C89B57] whitespace-nowrap"
 					data-testid="mobile-spatial-scale-readout"
 					title={$telemetryStore.cameraAltitudeFormatted}
 				>
-					{$telemetryStore.cameraAltitudeFormatted}
+					{formattedAu} AU · <span class="text-[#E8E6E1]/70">{$telemetryStore.spatialRegionLabel}</span>
 				</span>
 
-				<span class="hidden lg:inline text-[#E8E6E1]/72 shrink-0">
-					VOYAGER 1 · <span class="text-[#C89B57]">{formattedAu}</span> AU · <span class="text-[#E8E6E1]/60">{$telemetryStore.cameraAltitudeFormatted}</span>
+				<span class="hidden lg:inline text-[#E8E6E1]/75 shrink-0 whitespace-nowrap">
+					VOYAGER 1 · <span class="text-[#C89B57]">{formattedAu} AU</span> · <span class="text-[#E8E6E1]/68">{$telemetryStore.spatialRegionLabel}</span>
 				</span>
 
 				<button
@@ -204,7 +204,7 @@
 					onclick={() => (telemetryDrawerOpen = !telemetryDrawerOpen)}
 					aria-expanded={telemetryDrawerOpen}
 					aria-controls="voyager-telemetry-drawer"
-					class="text-[#E8E6E1]/85 hover:text-[#C89B57] transition-colors duration-500 cursor-pointer focus:outline-none shrink-0"
+					class="text-[#E8E6E1]/85 hover:text-[#C89B57] transition-colors duration-500 cursor-pointer focus:outline-none shrink-0 whitespace-nowrap"
 				>
 					{telemetryDrawerOpen ? '[TELEMETRY −]' : '[TELEMETRY +]'}
 				</button>
@@ -233,7 +233,7 @@
 							<span class="text-[11px] text-[#E8E6E1]/60">KM</span>
 						</div>
 						<div class="text-[11px] tracking-[0.12em] uppercase text-[#E8E6E1]/44">
-							V∞ 16.9995 KM/S · {$telemetryStore.cameraAltitudeFormatted}
+							V∞ 16.9995 KM/S · {$telemetryStore.spatialRegionLabel}
 						</div>
 					</div>
 
@@ -304,7 +304,7 @@
 								>
 									0{idx + 1} · {ch.startYear}–{ch.endYear}
 								</div>
-								<div class="mt-1 font-sans text-xs text-[#E8E6E1] group-hover:text-[#C89B57] truncate">
+								<div class="mt-1 font-sans text-xs text-[#E8E6E1] group-hover:text-[#C89B57] leading-snug">
 									{ch.title}
 								</div>
 							</button>

@@ -522,24 +522,28 @@
 								/>
 
 								{#if isSelected}
+									{@const shortTitle = m.title.split(':')[0].trim()}
+									{@const calloutText = `${m.year} · ${shortTitle}`}
+									{@const boxW = Math.max(195, Math.min(340, calloutText.length * 6.5 + 24))}
+									{@const boxX = Math.min(PLOT_WIDTH - boxW - 12, Math.max(PAD_LEFT + 4, x - boxW / 2))}
 									<rect
-										x={Math.min(PLOT_WIDTH - 245, Math.max(PAD_LEFT + 4, x - 110))}
+										x={boxX}
 										y={Math.max(PAD_TOP + 4, y - 34)}
-										width="225"
+										width={boxW}
 										height="22"
 										fill="#050607"
 										stroke="#C89B57"
 										stroke-width="1"
 									/>
 									<text
-										x={Math.min(PLOT_WIDTH - 132, Math.max(PAD_LEFT + 116, x))}
+										x={boxX + boxW / 2}
 										y={Math.max(PAD_TOP + 18, y - 19)}
 										text-anchor="middle"
 										font-family="var(--font-mono)"
 										font-size="10"
 										fill="#E8E6E1"
 									>
-										{m.year} · {m.title.slice(0, 26)}{m.title.length > 26 ? '…' : ''}
+										{calloutText}
 									</text>
 								{/if}
 							</g>
@@ -582,32 +586,32 @@
 					<div class="mt-3 grid grid-cols-2 border-y border-[rgba(232,230,225,0.10)] divide-x divide-y divide-[rgba(232,230,225,0.10)] font-mono-tech">
 						<div class="py-2 pr-3">
 							<div class="text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">AGENCY</div>
-							<div class="mt-0.5 text-xs text-[#E8E6E1] truncate" title={activeMilestone.agency}>
+							<div class="mt-0.5 text-xs text-[#E8E6E1] leading-snug" title={activeMilestone.agency}>
 								{activeMilestone.agency}
 							</div>
 						</div>
 						<div class="py-2 pl-3">
 							<div class="text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">DISTANCE</div>
-							<div class="mt-0.5 text-xs text-[#C89B57] truncate">
+							<div class="mt-0.5 text-xs text-[#C89B57] leading-snug">
 								{formatMissionDistance(activeMilestone.distanceFromEarthKm)}
 							</div>
 						</div>
 						<div class="py-2 pr-3">
 							<div class="text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">REGIME</div>
-							<div class="mt-0.5 text-xs text-[#E8E6E1] truncate">
+							<div class="mt-0.5 text-xs text-[#E8E6E1] leading-snug">
 								{activeMilestone.locationOrOrbit}
 							</div>
 						</div>
 						<div class="py-2 pl-3">
 							<div class="text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">VOYAGER 1 EPOCH</div>
-							<div class="mt-0.5 text-xs text-[#C89B57] truncate">
+							<div class="mt-0.5 text-xs text-[#C89B57] leading-snug">
 								{activeMilestone.voyagerAuAtEvent} AU
 							</div>
 						</div>
 					</div>
 
 					<!-- Summary & Optional Deep Dive (>= 16px body copy) -->
-					<p class="mt-3 max-w-[65ch] font-sans text-base text-[rgba(232,230,225,0.78)] leading-[1.6] line-clamp-3 sm:line-clamp-none">
+					<p class="mt-3 max-w-[65ch] font-sans text-base text-[rgba(232,230,225,0.82)] leading-[1.6]">
 						{activeMilestone.summary}
 					</p>
 
@@ -625,7 +629,7 @@
 						<div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[rgba(232,230,225,0.10)] pt-3">
 							{#each activeMilestone.keyStats.slice(0, 4) as stat}
 								<div>
-									<div class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)] truncate">
+									<div class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)] leading-snug">
 										{stat.label}
 									</div>
 									<div class="mt-0.5 font-display text-base sm:text-lg font-normal text-[#E8E6E1]">
@@ -684,21 +688,21 @@
 						}}
 					>
 						<div class="min-w-0 flex-1 sm:w-full">
-							<div class="flex items-center justify-between gap-2 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em]">
+							<div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em]">
 								<span class="text-[#C89B57] shrink-0">{String(idx + 1).padStart(2, '0')} · {m.year}</span>
-								<span class="hidden sm:inline-flex items-center gap-1.5 text-[rgba(232,230,225,0.6)] truncate max-w-[140px]">
+								<span class="hidden sm:inline-flex items-center gap-1.5 text-[rgba(232,230,225,0.6)]">
 									<span class="h-1.5 w-1.5 rounded-full shrink-0" style={`background-color: ${color};`}></span>
-									<span class="truncate">{m.agency}</span>
+									<span class="leading-snug">{m.agency}</span>
 								</span>
 							</div>
 
-							<h4 class="mt-0.5 sm:mt-1.5 font-display text-base font-normal text-[#E8E6E1] leading-snug truncate sm:line-clamp-2 sm:whitespace-normal">
+							<h4 class="mt-0.5 sm:mt-1.5 font-display text-base font-normal text-[#E8E6E1] leading-snug">
 								{m.title}
 							</h4>
 						</div>
 
-						<div class="sm:mt-3 sm:pt-2.5 sm:w-full sm:border-t sm:border-[rgba(232,230,225,0.09)] flex items-center justify-between gap-2 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] shrink-0">
-							<span class="hidden sm:inline text-[rgba(232,230,225,0.6)] truncate max-w-[155px]">
+						<div class="sm:mt-3 sm:pt-2.5 sm:w-full sm:border-t sm:border-[rgba(232,230,225,0.09)] flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] shrink-0">
+							<span class="hidden sm:inline text-[rgba(232,230,225,0.6)] leading-snug">
 								{formatMissionDistance(m.distanceFromEarthKm)}
 							</span>
 							<button
