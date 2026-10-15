@@ -367,12 +367,255 @@ export const CHAPTER_ART_BY_ID: Record<string, AssetManifestEntry> = {
 	'cassini-saturn-eclipse': ASSET_MANIFEST[7],
 	'milky-way-gaia': ASSET_MANIFEST[8]
 };
+export interface VideoManifestEntry {
+	id: string;
+	milestoneId: string;
+	kind: 'self-hosted' | 'youtube-embed';
+	behavior: 'ambient-loop' | 'click-to-play';
+	shortTabLabel?: string;
+	title: string;
+	missionName: string;
+	eventDate: string;
+	year: number;
+	durationLabel: string;
+	hasAudio: boolean;
+	mp4Url?: string;
+	webmUrl?: string;
+	posterUrl: string;
+	youtubeId?: string;
+	embeddable?: boolean;
+	archiveName: string;
+	archiveId: string;
+	sourceUrl: string;
+	license: string;
+	creditLine: string;
+}
 
-export const ASSETS_MARKDOWN = `# Archival Imagery & 3D Planetary Texture Provenance (\`ASSETS.md\`)
+export const VIDEO_MANIFEST: VideoManifestEntry[] = [
+	{
+		id: 'apollo-soyuz-docking',
+		milestoneId: 'apollo-soyuz-1975',
+		kind: 'self-hosted',
+		behavior: 'click-to-play',
+		title: 'Apollo–Soyuz Orbital Docking Tunnel & Historic Handshake in Space',
+		missionName: 'Apollo–Soyuz Test Project',
+		eventDate: 'July 17, 1975 · 19:19 UTC',
+		year: 1975,
+		durationLabel: '0:16',
+		hasAudio: true,
+		mp4Url: '/assets/videos/apollo-soyuz-docking.mp4',
+		webmUrl: '/assets/videos/apollo-soyuz-docking.webm',
+		posterUrl: '/assets/videos/apollo-soyuz-docking-poster.webp',
+		archiveName: 'NASA JSC / NARA',
+		archiveId: 'JSC-ASTP-1975 / IssAnniversary12',
+		sourceUrl: 'https://www.nasa.gov/apollo-soyuz-test-project/',
+		license: 'Public Domain — NASA / Johnson Space Center',
+		creditLine: 'Video: NASA / Johnson Space Center (ASTP 16mm Onboard Film, July 17, 1975)'
+	},
+	{
+		id: 'sts1-columbia-launch',
+		milestoneId: 'sts-1-columbia-1981',
+		kind: 'self-hosted',
+		behavior: 'click-to-play',
+		title: 'STS-1 Space Shuttle Columbia Main Engine Ignition & Maiden Liftoff',
+		missionName: 'STS-1 Columbia',
+		eventDate: 'April 12, 1981 · 12:00:03 UTC',
+		year: 1981,
+		durationLabel: '0:17',
+		hasAudio: true,
+		mp4Url: '/assets/videos/sts1-columbia-launch.mp4',
+		webmUrl: '/assets/videos/sts1-columbia-launch.webm',
+		posterUrl: '/assets/videos/sts1-columbia-launch-poster.webp',
+		archiveName: 'NASA Image & Video Library',
+		archiveId: 'KSC-20210325-MH-JRS01_0001',
+		sourceUrl:
+			'https://images.nasa.gov/details/KSC-20210325-MH-JRS01_0001-STS-1_File_Footage_for_40th_Anniversary',
+		license: 'Public Domain — NASA / Kennedy Space Center',
+		creditLine: 'Video: NASA / Kennedy Space Center (Launch Complex 39A Archival Film, April 12, 1981)'
+	},
+	{
+		id: 'hubble-servicing-eva',
+		milestoneId: 'hubble-repair-1993',
+		kind: 'self-hosted',
+		behavior: 'click-to-play',
+		title: 'STS-61 Hubble Servicing Mission 1 Orbital Spacewalk & COSTAR Installation',
+		missionName: 'Hubble Servicing Mission 1 (STS-61)',
+		eventDate: 'December 4–9, 1993',
+		year: 1993,
+		durationLabel: '0:16',
+		hasAudio: true,
+		mp4Url: '/assets/videos/hubble-servicing-eva.mp4',
+		webmUrl: '/assets/videos/hubble-servicing-eva.webm',
+		posterUrl: '/assets/videos/hubble-servicing-eva-poster.webp',
+		archiveName: 'NASA GSFC / Image Library',
+		archiveId: 'GSFC_20190423_HST_m13176_TTSM1',
+		sourceUrl: 'https://images.nasa.gov/details/GSFC_20190423_HST_m13176_TTSM1',
+		license: 'Public Domain — NASA / Goddard Space Flight Center',
+		creditLine: 'Video: NASA / Goddard Space Flight Center / Johnson Space Center (STS-61 EVA Footage)'
+	},
+	{
+		id: 'cassini-grand-finale',
+		milestoneId: 'cassini-huygens-2005',
+		kind: 'self-hosted',
+		behavior: 'ambient-loop',
+		title: 'Cassini Grand Finale: Proximal Dive Between Saturn and Its Innermost Rings',
+		missionName: 'Cassini–Huygens at Saturn',
+		eventDate: 'April – September 2017',
+		year: 2017,
+		durationLabel: '0:14',
+		hasAudio: false,
+		mp4Url: '/assets/videos/cassini-grand-finale.mp4',
+		webmUrl: '/assets/videos/cassini-grand-finale.webm',
+		posterUrl: '/assets/videos/cassini-grand-finale-poster.webp',
+		archiveName: 'NASA GSFC / JPL-Caltech',
+		archiveId: 'GSFC_20170912_Cassini_m12709_CIRS_Short',
+		sourceUrl: 'https://images.nasa.gov/details/GSFC_20170912_Cassini_m12709_CIRS_Short',
+		license: 'Public Domain — NASA / JPL-Caltech / GSFC',
+		creditLine: 'Video: NASA / JPL-Caltech / Goddard Space Flight Center (Cassini Grand Finale Archive)'
+	},
+	{
+		id: 'falcon9-lz1-landing',
+		milestoneId: 'falcon9-landing-2015',
+		kind: 'youtube-embed',
+		behavior: 'click-to-play',
+		title: 'Falcon 9 First Stage Landing at Landing Zone 1 (From Helicopter)',
+		missionName: 'Falcon 9 Flight 20 (ORBCOMM-2)',
+		eventDate: 'December 21, 2015 · 01:39 UTC',
+		year: 2015,
+		durationLabel: '0:42',
+		hasAudio: true,
+		youtubeId: 'ZCBE8ocOkAQ',
+		embeddable: true,
+		posterUrl: 'https://i.ytimg.com/vi/ZCBE8ocOkAQ/hqdefault.jpg',
+		archiveName: 'YouTube (@SpaceX)',
+		archiveId: 'yt:ZCBE8ocOkAQ',
+		sourceUrl: 'https://www.youtube.com/watch?v=ZCBE8ocOkAQ',
+		license: 'Embedded External Source — © SpaceX (Official YouTube Channel)',
+		creditLine: 'Video: SpaceX'
+	},
+	{
+		id: 'starship-flight5-catch',
+		milestoneId: 'commercial-crew-demo2-2020',
+		kind: 'youtube-embed',
+		behavior: 'click-to-play',
+		title: 'Starship’s Fifth Flight Test — Super Heavy Booster "Mechazilla" Tower Catch',
+		missionName: 'SpaceX Starship Flight 5',
+		eventDate: 'October 13, 2024 · 12:32 UTC',
+		year: 2024,
+		durationLabel: '2:48',
+		hasAudio: true,
+		youtubeId: 'hI9HQfCAw64',
+		embeddable: true,
+		posterUrl: 'https://i.ytimg.com/vi/hI9HQfCAw64/hqdefault.jpg',
+		archiveName: 'YouTube (@SpaceX)',
+		archiveId: 'yt:hI9HQfCAw64',
+		sourceUrl: 'https://www.youtube.com/watch?v=hI9HQfCAw64',
+		license: 'Embedded External Source — © SpaceX (Official YouTube Channel)',
+		creditLine: 'Video: SpaceX'
+	},
+	{
+		id: 'perseverance-edl-touchdown',
+		milestoneId: 'perseverance-ingenuity-2021',
+		kind: 'self-hosted',
+		behavior: 'click-to-play',
+		shortTabLabel: '01 · Perseverance EDL Touchdown',
+		title: 'Perseverance Rover Descent & Sky Crane Touchdown on Mars (Onboard Cameras)',
+		missionName: 'Mars 2020 Perseverance',
+		eventDate: 'February 18, 2021 · 20:55 UTC',
+		year: 2021,
+		durationLabel: '0:22',
+		hasAudio: true,
+		mp4Url: '/assets/videos/perseverance-edl-touchdown.mp4',
+		webmUrl: '/assets/videos/perseverance-edl-touchdown.webm',
+		posterUrl: '/assets/videos/perseverance-edl-touchdown-poster.webp',
+		archiveName: 'NASA / JPL-Caltech',
+		archiveId: 'JPL-20210222-M2020f-0001',
+		sourceUrl:
+			'https://images.nasa.gov/details/JPL-20210222-M2020f-0001-Perseverance%20Rover%E2%80%99s%20Descent%20and%20Touchdown%20on%20Mars',
+		license: 'Public Domain — NASA / JPL-Caltech',
+		creditLine: 'Video: NASA / JPL-Caltech (Mars 2020 EDL Onboard Cameras & Mission Control Audio)'
+	},
+	{
+		id: 'ingenuity-first-flight',
+		milestoneId: 'perseverance-ingenuity-2021',
+		kind: 'self-hosted',
+		behavior: 'ambient-loop',
+		shortTabLabel: '02 · Ingenuity First Flight (Mastcam-Z)',
+		title: 'First Powered Flight of Ingenuity Mars Helicopter at Wright Brothers Field',
+		missionName: 'Ingenuity Mars Helicopter',
+		eventDate: 'April 19, 2021 · 07:34 UTC',
+		year: 2021,
+		durationLabel: '0:16',
+		hasAudio: false,
+		mp4Url: '/assets/videos/ingenuity-first-flight.mp4',
+		webmUrl: '/assets/videos/ingenuity-first-flight.webm',
+		posterUrl: '/assets/videos/ingenuity-first-flight-poster.webp',
+		archiveName: 'NASA / JPL-Caltech /ASU',
+		archiveId: 'JPL-20210419-TECHf-0001',
+		sourceUrl:
+			'https://images.nasa.gov/details/JPL-20210419-TECHf-0001-First%20Video%20of%20NASA%E2%80%99s%20Ingenuity%20Mars%20Helicopter%20in%20Flight',
+		license: 'Public Domain — NASA / JPL-Caltech / ASU / MSSS',
+		creditLine: 'Video: NASA / JPL-Caltech / ASU / MSSS (Perseverance Mastcam-Z, April 19, 2021)'
+	},
+	{
+		id: 'jwst-launch-deploy',
+		milestoneId: 'jwst-first-images-2022',
+		kind: 'self-hosted',
+		behavior: 'click-to-play',
+		title: 'James Webb Space Telescope Ariane 5 Separation & Solar Array Unfurling in Space',
+		missionName: 'James Webb Space Telescope',
+		eventDate: 'December 25, 2021 · 12:47 UTC',
+		year: 2021,
+		durationLabel: '0:16',
+		hasAudio: true,
+		mp4Url: '/assets/videos/jwst-launch-deploy.mp4',
+		webmUrl: '/assets/videos/jwst-launch-deploy.webm',
+		posterUrl: '/assets/videos/jwst-launch-deploy-poster.webp',
+		archiveName: 'NASA / ESA / Arianespace',
+		archiveId: 'NHQ_2021_1225_JWST_Launch / SVS-14070',
+		sourceUrl: 'https://svs.gsfc.nasa.gov/14070',
+		license: 'Public Domain — NASA / ESA / CSA / STScI',
+		creditLine: 'Video: NASA / ESA / Arianespace / STScI (Ariane 5 Upper-Stage Camera, Dec 25, 2021)'
+	},
+	{
+		id: 'dart-dimorphos-impact',
+		milestoneId: 'dart-planetary-defense-2022',
+		kind: 'self-hosted',
+		behavior: 'ambient-loop',
+		title: 'DART DRACO Camera Final Frames Closing on Asteroid Moonlet Dimorphos',
+		missionName: 'Double Asteroid Redirection Test (DART)',
+		eventDate: 'September 26, 2022 · 23:14:24 UTC',
+		year: 2022,
+		durationLabel: '0:15',
+		hasAudio: false,
+		mp4Url: '/assets/videos/dart-dimorphos-impact.mp4',
+		webmUrl: '/assets/videos/dart-dimorphos-impact.webm',
+		posterUrl: '/assets/videos/dart-dimorphos-impact-poster.webp',
+		archiveName: 'NASA SVS / Johns Hopkins APL',
+		archiveId: 'SVS-31194',
+		sourceUrl: 'https://svs.gsfc.nasa.gov/31194',
+		license: 'Public Domain — NASA / Johns Hopkins APL',
+		creditLine: 'Video: NASA / Johns Hopkins Applied Physics Laboratory (DRACO Imager, SVS 31194)'
+	}
+];
 
-Every photograph, panoramic star map, and 3D planetary surface texture rendered in **Fifty Years Beyond Earth (1976–2026)** is stored locally under \`./fifty-years-beyond-earth/static/assets/\` and served directly from \`/assets/...\` at runtime without external hotlinking.
+export const VIDEOS_BY_MILESTONE_ID: Record<string, VideoManifestEntry[]> = {
+	'apollo-soyuz-1975': [VIDEO_MANIFEST[0]],
+	'sts-1-columbia-1981': [VIDEO_MANIFEST[1]],
+	'hubble-repair-1993': [VIDEO_MANIFEST[2]],
+	'cassini-huygens-2005': [VIDEO_MANIFEST[3]],
+	'falcon9-landing-2015': [VIDEO_MANIFEST[4]],
+	'commercial-crew-demo2-2020': [VIDEO_MANIFEST[5]],
+	'perseverance-ingenuity-2021': [VIDEO_MANIFEST[6], VIDEO_MANIFEST[7]],
+	'jwst-first-images-2022': [VIDEO_MANIFEST[8]],
+	'dart-planetary-defense-2022': [VIDEO_MANIFEST[9]]
+};
 
-All mission photographs and planetary maps originate from official public-domain or open-access scientific archives (**NASA Image and Video Library**, **NASA/JPL-Caltech Planetary Photojournal**, **NASA Earth Observatory / Visible Earth**, **NASA Scientific Visualization Studio**, **Space Telescope Science Institute**, and **ESO / Event Horizon Telescope Collaboration**).
+export const ASSETS_MARKDOWN = `# Archival Imagery, Video Footage & 3D Planetary Texture Provenance (\`ASSETS.md\`)
+
+Every photograph, panoramic star map, self-hosted public-domain video clip, and 3D planetary surface texture rendered in **Fifty Years Beyond Earth (1975–2026+)** is stored locally under \`./fifty-years-beyond-earth/static/assets/\` and served directly from \`/assets/...\` at runtime. Copyrighted SpaceX mission moments are integrated exclusively via privacy-enhanced official YouTube lite-embeds (\`www.youtube-nocookie.com\`) without downloading or re-hosting.
+
+All self-hosted photographs, video clips, and planetary maps originate from official public-domain or open-access scientific archives (**NASA Image and Video Library**, **NASA/JPL-Caltech Planetary Photojournal**, **NASA Earth Observatory / Visible Earth**, **NASA Scientific Visualization Studio**, **Space Telescope Science Institute**, and **ESO / Event Horizon Telescope Collaboration**).
 
 ---
 
@@ -413,4 +656,32 @@ Each editorial photograph is pre-encoded in six responsive variants (\`-800.avif
 | \`enceladus-map\` | Enceladus (\`CassiniScene\`) | **Cassini Global Color Mosaic of Enceladus** | \`1024×512\` | NASA / JPL Photojournal (\`PIA18435\`) | <https://photojournal.jpl.nasa.gov/catalog/PIA18435> | <https://images-assets.nasa.gov/image/PIA18435/PIA18435~large.jpg> | Public Domain — NASA/JPL-Caltech/SSI/LPI | \`Texture Credit: NASA / JPL-Caltech / Space Science Institute / Lunar and Planetary Institute (Paul Schenk, PIA18435)\` | \`/assets/textures/enceladus-map.webp\` |
 | \`mars-map\` | Mars (\`VoyagerScene\`) | **Global Color Mosaic of Mars (Viking Orbiter & MRO MARCI)** | \`1024×512\` | NASA / JPL Photojournal (\`PIA00407\` & \`PIA15963\`) | <https://photojournal.jpl.nasa.gov/catalog/PIA00407> | <https://images-assets.nasa.gov/image/PIA00407/PIA00407~large.jpg> | Public Domain — NASA/JPL/USGS/MSSS | \`Texture Credit: NASA / JPL / USGS / Malin Space Science Systems (PIA00407 & PIA15963)\` | \`/assets/textures/mars-map.webp\` |
 | \`pluto-map\` | Pluto (\`VoyagerScene\`) | **New Horizons Global Cylindrical Color Map of Pluto** | \`1024×512\` | NASA / JPL Photojournal (\`PIA19956\` & \`PIA11707\`) | <https://photojournal.jpl.nasa.gov/catalog/PIA19956> | <https://images-assets.nasa.gov/image/PIA19956/PIA19956~orig.jpg> | Public Domain — NASA/JHUAPL/SwRI | \`Texture Credit: NASA / Johns Hopkins University Applied Physics Laboratory / Southwest Research Institute (PIA19956)\` | \`/assets/textures/pluto-map.webp\` |
+
+---
+
+## 4. Self-Hosted Archival Mission Video Clips (\`static/assets/videos/\`)
+
+Each public-domain mission clip is encoded in dual H.264 (\`.mp4\`) and VP9 (\`.webm\`) streams with a dedicated WebP poster frame (\`-poster.webp\`).
+
+| Video ID | Milestone Binding | Behavior | Title | Archive & ID | Source URL | License | Mandatory Credit Line | Local Files |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| \`apollo-soyuz-docking\` | \`apollo-soyuz-1975\` | Click-to-Play | **Apollo–Soyuz Orbital Docking Tunnel & Historic Handshake in Space** | NASA JSC / NARA (\`JSC-ASTP-1975\` / \`IssAnniversary12\`) | <https://www.nasa.gov/apollo-soyuz-test-project/> | Public Domain — NASA / JSC | \`Video: NASA / Johnson Space Center (ASTP 16mm Onboard Film, July 17, 1975)\` | \`/assets/videos/apollo-soyuz-docking.{mp4,webm,-poster.webp}\` |
+| \`sts1-columbia-launch\` | \`sts-1-columbia-1981\` | Click-to-Play | **STS-1 Space Shuttle Columbia Main Engine Ignition & Maiden Liftoff** | NASA Image & Video Library (\`KSC-20210325-MH-JRS01_0001\`) | <https://images.nasa.gov/details/KSC-20210325-MH-JRS01_0001-STS-1_File_Footage_for_40th_Anniversary> | Public Domain — NASA / KSC | \`Video: NASA / Kennedy Space Center (Launch Complex 39A Archival Film, April 12, 1981)\` | \`/assets/videos/sts1-columbia-launch.{mp4,webm,-poster.webp}\` |
+| \`hubble-servicing-eva\` | \`hubble-repair-1993\` | Click-to-Play | **STS-61 Hubble Servicing Mission 1 Orbital Spacewalk & COSTAR Installation** | NASA GSFC (\`GSFC_20190423_HST_m13176_TTSM1\`) | <https://images.nasa.gov/details/GSFC_20190423_HST_m13176_TTSM1> | Public Domain — NASA / GSFC | \`Video: NASA / Goddard Space Flight Center / Johnson Space Center (STS-61 EVA Footage)\` | \`/assets/videos/hubble-servicing-eva.{mp4,webm,-poster.webp}\` |
+| \`cassini-grand-finale\` | \`cassini-huygens-2005\` | Muted Ambient Loop | **Cassini Grand Finale: Proximal Dive Between Saturn and Its Innermost Rings** | NASA GSFC / JPL (\`GSFC_20170912_Cassini_m12709_CIRS_Short\`) | <https://images.nasa.gov/details/GSFC_20170912_Cassini_m12709_CIRS_Short> | Public Domain — NASA / JPL-Caltech / GSFC | \`Video: NASA / JPL-Caltech / Goddard Space Flight Center (Cassini Grand Finale Archive)\` | \`/assets/videos/cassini-grand-finale.{mp4,webm,-poster.webp}\` |
+| \`perseverance-edl-touchdown\` | \`perseverance-ingenuity-2021\` | Click-to-Play | **Perseverance Rover Descent & Sky Crane Touchdown on Mars (Onboard Cameras)** | NASA / JPL-Caltech (\`JPL-20210222-M2020f-0001\`) | <https://images.nasa.gov/details/JPL-20210222-M2020f-0001-Perseverance%20Rover%E2%80%99s%20Descent%20and%20Touchdown%20on%20Mars> | Public Domain — NASA / JPL-Caltech | \`Video: NASA / JPL-Caltech (Mars 2020 EDL Onboard Cameras & Mission Control Audio)\` | \`/assets/videos/perseverance-edl-touchdown.{mp4,webm,-poster.webp}\` |
+| \`ingenuity-first-flight\` | \`perseverance-ingenuity-2021\` | Muted Ambient Loop | **First Powered Flight of Ingenuity Mars Helicopter at Wright Brothers Field** | NASA / JPL-Caltech (\`JPL-20210419-TECHf-0001\`) | <https://images.nasa.gov/details/JPL-20210419-TECHf-0001-First%20Video%20of%20NASA%E2%80%99s%20Ingenuity%20Mars%20Helicopter%20in%20Flight> | Public Domain — NASA / JPL-Caltech / ASU | \`Video: NASA / JPL-Caltech / ASU / MSSS (Perseverance Mastcam-Z, April 19, 2021)\` | \`/assets/videos/ingenuity-first-flight.{mp4,webm,-poster.webp}\` |
+| \`jwst-launch-deploy\` | \`jwst-first-images-2022\` | Click-to-Play | **James Webb Space Telescope Ariane 5 Separation & Solar Array Unfurling in Space** | NASA / ESA / STScI (\`NHQ_2021_1225_JWST_Launch\` / \`SVS-14070\`) | <https://svs.gsfc.nasa.gov/14070> | Public Domain — NASA / ESA / CSA / STScI | \`Video: NASA / ESA / Arianespace / STScI (Ariane 5 Upper-Stage Camera, Dec 25, 2021)\` | \`/assets/videos/jwst-launch-deploy.{mp4,webm,-poster.webp}\` |
+| \`dart-dimorphos-impact\` | \`dart-planetary-defense-2022\` | Muted Ambient Loop | **DART DRACO Camera Final Frames Closing on Asteroid Moonlet Dimorphos** | NASA SVS / JHUAPL (\`SVS-31194\`) | <https://svs.gsfc.nasa.gov/31194> | Public Domain — NASA / Johns Hopkins APL | \`Video: NASA / Johns Hopkins Applied Physics Laboratory (DRACO Imager, SVS 31194)\` | \`/assets/videos/dart-dimorphos-impact.{mp4,webm,-poster.webp}\` |
+
+---
+
+## 5. Embedded External Video Sources (Official YouTube Privacy-Enhanced Lite-Embeds)
+
+Copyrighted commercial spaceflight footage is never downloaded or re-hosted; it is embedded on user click via \`https://www.youtube-nocookie.com/embed/{id}\` from SpaceX's official YouTube channel (\`@SpaceX\`).
+
+| Video ID | Milestone Binding | Official YouTube ID | Title | Event Date | Source URL | License / Terms | Mandatory Credit Line |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| \`falcon9-lz1-landing\` | \`falcon9-landing-2015\` | \`ZCBE8ocOkAQ\` | **Falcon 9 First Stage Landing at Landing Zone 1 (From Helicopter)** | Dec 21, 2015 | <https://www.youtube.com/watch?v=ZCBE8ocOkAQ> | Embedded External Source — © SpaceX | \`Video: SpaceX\` |
+| \`starship-flight5-catch\` | \`commercial-crew-demo2-2020\` | \`hI9HQfCAw64\` | **Starship’s Fifth Flight Test — Super Heavy Booster "Mechazilla" Tower Catch** | Oct 13, 2024 | <https://www.youtube.com/watch?v=hI9HQfCAw64> | Embedded External Source — © SpaceX | \`Video: SpaceX\` |
 `;

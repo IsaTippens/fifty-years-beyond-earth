@@ -7,14 +7,16 @@
 		getPublicationLabel,
 		type ChapterReferenceGroup
 	} from '$lib/data/missions';
-	import { ASSET_MANIFEST, ASSETS_MARKDOWN } from '$lib/data/assets';
+	import { ASSET_MANIFEST, VIDEO_MANIFEST, ASSETS_MARKDOWN } from '$lib/data/assets';
 
 	const chapterGroups: ChapterReferenceGroup[] = CHAPTER_REFERENCES;
 	const ASSETS_GROUP_KEY = 'assets-manifest';
+	const VIDEOS_GROUP_KEY = 'videos-manifest';
 
 	const initialExpanded: Record<string, boolean> = Object.fromEntries([
 		...chapterGroups.map((g) => [g.chapterId, false]),
-		[ASSETS_GROUP_KEY, false]
+		[ASSETS_GROUP_KEY, false],
+		[VIDEOS_GROUP_KEY, false]
 	]);
 
 	let expandedChapters = $state<Record<string, boolean>>(initialExpanded);
@@ -29,6 +31,7 @@
 			next[group.chapterId] = isDesktop;
 		}
 		next[ASSETS_GROUP_KEY] = isDesktop;
+		next[VIDEOS_GROUP_KEY] = isDesktop;
 		expandedChapters = next;
 	});
 
@@ -73,7 +76,7 @@
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono-tech text-[11px] uppercase tracking-[0.16em]">
 					<span class="text-[#C89B57]">PRIMARY ARCHIVE INDEX</span>
 					<span class="text-[#E8E6E1]/60">
-						{ALL_SOURCES.length} CITATIONS · {ASSET_MANIFEST.length} ARCHIVAL PLATES
+						{ALL_SOURCES.length} CITATIONS · {ASSET_MANIFEST.length} ARCHIVAL PLATES · {VIDEO_MANIFEST.length} VIDEO SOURCES
 					</span>
 				</div>
 				<h2
@@ -116,9 +119,8 @@
 
 				<div class="border border-[#E8E6E1]/10 bg-[#08090B]">
 					<div class="flex items-center justify-between gap-3 border-b border-[#E8E6E1]/10 px-4 py-2.5">
-						<span class="font-mono-tech text-xs text-[#E8E6E1]/75">ASSETS.md ({ASSET_MANIFEST.length})</span>
+						<span class="font-mono-tech text-xs text-[#E8E6E1]/75">ASSETS.md ({ASSET_MANIFEST.length + VIDEO_MANIFEST.length})</span>
 						<button
-							type="button"
 							onclick={copyAssetsMarkdown}
 							class="font-mono-tech text-xs text-[#C89B57] hover:text-[#DDB474] cursor-pointer"
 						>
@@ -247,6 +249,68 @@
 										class="inline-flex items-center gap-1 text-[#C89B57] hover:text-[#DDB474] shrink-0 transition-colors duration-200"
 									>
 										<span>{getPublicationLabel(asset.sourceUrl)}</span>
+										<span aria-hidden="true">↗</span>
+									</a>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Collapsible Archival & Embedded Mission Video Sources Group (ASSETS.md) -->
+			<div>
+				<button
+					type="button"
+					onclick={() => toggleGroup(VIDEOS_GROUP_KEY)}
+					aria-expanded={Boolean(expandedChapters[VIDEOS_GROUP_KEY])}
+					class="w-full py-3.5 flex items-baseline justify-between gap-3 text-left transition-colors duration-200 hover:text-[#C89B57] cursor-pointer"
+				>
+					<div class="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 min-w-0">
+						<span class="font-display text-base sm:text-lg font-normal text-[#E8E6E1]">
+							Archival Mission Footage &amp; Embedded Video Sources (ASSETS.md)
+						</span>
+						<span class="font-mono-tech text-xs text-[#C89B57]">
+							1975–2024
+						</span>
+					</div>
+					<div class="flex items-center gap-2.5 shrink-0 font-mono-tech text-xs uppercase tracking-[0.14em] text-[#E8E6E1]/60">
+						<span>{VIDEO_MANIFEST.length} videos</span>
+						<span class="w-3 text-center text-sm text-[#C89B57]" aria-hidden="true">
+							{expandedChapters[VIDEOS_GROUP_KEY] ? '−' : '+'}
+						</span>
+					</div>
+				</button>
+
+				{#if expandedChapters[VIDEOS_GROUP_KEY]}
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 border-t border-[#E8E6E1]/10">
+						{#each VIDEO_MANIFEST as vid (vid.id)}
+							<div class="py-2.5 border-b border-[#E8E6E1]/10 last:border-b-0 md:last:border-b flex flex-col justify-center min-w-0">
+								<div class="flex items-baseline justify-between gap-3 min-w-0">
+									<h3
+										class="font-display text-base font-normal text-[#E8E6E1] leading-snug"
+										title={vid.title}
+									>
+										{vid.title}
+									</h3>
+									<span class="font-mono-tech text-xs text-[#C89B57] shrink-0">
+										{vid.archiveId} · {vid.year}
+									</span>
+								</div>
+								<div class="mt-1 font-sans text-xs text-[#E8E6E1]/68 leading-snug" title={vid.creditLine}>
+									{vid.creditLine}
+								</div>
+								<div class="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-mono-tech text-xs">
+									<span class="text-[#E8E6E1]/55 leading-snug" title={vid.license}>
+										{vid.license}
+									</span>
+									<a
+										href={vid.sourceUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="inline-flex items-center gap-1 text-[#C89B57] hover:text-[#DDB474] shrink-0 transition-colors duration-200"
+									>
+										<span>{vid.kind === 'youtube-embed' ? 'YouTube (SpaceX)' : vid.archiveName}</span>
 										<span aria-hidden="true">↗</span>
 									</a>
 								</div>
