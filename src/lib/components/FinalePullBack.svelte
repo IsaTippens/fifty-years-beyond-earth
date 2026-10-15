@@ -289,10 +289,10 @@
 	id="finale-pullback"
 	bind:this={sectionEl}
 	aria-label="The Pull-Back: From the Heliosphere to the Milky Way Galaxy"
-	class="relative w-full min-h-[210vh] md:min-h-[420vh] bg-[#050607] select-none"
+	class="relative w-full min-h-[200vh] md:min-h-[260vh] bg-[#050607] select-none"
 >
-	<!-- Sticky Full-Viewport Stage (z-50 sits cleanly over global HUD chrome on the final screen) -->
-	<div class="sticky top-0 z-50 h-screen w-full overflow-hidden bg-[#050607]">
+	<!-- Sticky Full-Viewport Stage -->
+	<div class="sticky top-0 z-20 h-screen w-full overflow-hidden bg-[#050607]">
 		<!-- =====================================================================
 		     LAYER 1: REAL ESA GAIA / NASA SVS ALL-SKY MILKY WAY PANORAMA (Beat 5)
 		     ===================================================================== -->
@@ -1070,7 +1070,7 @@
 		     ===================================================================== -->
 		<div
 			class="
-				pointer-events-none absolute top-8 left-6 right-6 sm:left-10 sm:right-10 lg:left-16 lg:right-16
+				pointer-events-none absolute top-16 sm:top-20 left-6 right-6 sm:left-10 sm:right-10 lg:left-16 lg:right-48
 				flex flex-wrap items-start justify-between gap-4
 			"
 			style={`opacity: ${scaleReadoutOpacity.toFixed(4)};`}

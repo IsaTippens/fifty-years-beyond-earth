@@ -164,7 +164,7 @@
 	<!-- ====================================================================== -->
 	<div
 		bind:this={openerRef}
-		class="relative min-h-[58vh] md:min-h-[78vh] w-full overflow-hidden flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-9 md:py-16"
+		class="relative min-h-[60vh] md:min-h-[76vh] w-full overflow-hidden flex flex-col justify-center px-6 sm:px-10 lg:px-16 pt-20 pb-10 md:pt-28 md:pb-16"
 	>
 		{#if chapterArt && chapterArtBase}
 			<div class="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -182,7 +182,7 @@
 					<img
 						src={`${chapterArtBase}-1600.webp`}
 						alt={chapterArt.caption || chapterArt.title}
-						loading={index === 0 ? 'eager' : 'lazy'}
+						fetchpriority="high"
 						decoding="async"
 						class="chapter-ken-burns h-full w-full object-cover"
 						style={getChapterBackdropFilter(chapter.chapterId)}
@@ -196,6 +196,17 @@
 			</div>
 		{/if}
 		<div class="relative z-10 mx-auto w-full max-w-5xl">
+			<!-- Back to the Journey Breadcrumb -->
+			<div class="kinetic-item mb-3 md:mb-5">
+				<a
+					href="/"
+					class="inline-flex items-center gap-2 font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57] hover:text-[#DDB474] transition-colors duration-300"
+					style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.96);"
+				>
+					<span>← Back to the Journey</span>
+				</a>
+			</div>
+
 			<!-- Small Tracked-Out Monospace Telemetry Header -->
 			<div
 				class="kinetic-item font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/85"
@@ -211,7 +222,7 @@
 			</div>
 
 			<!-- Enormous Fraunces Chapter Title with Masked Rise -->
-			<h2
+			<h1
 				class="mt-3 md:mt-5 font-display font-normal text-[#F5F3EE] overflow-hidden pb-1.5 break-words"
 				style="font-size: clamp(2.15rem, 8vw, 7.5rem); line-height: 0.94; letter-spacing: -0.03em; text-shadow: 0 2px 32px rgba(5, 6, 7, 0.96), 0 1px 8px rgba(5, 6, 7, 0.92);"
 			>
@@ -220,8 +231,7 @@
 				>
 					{chapter.title}
 				</span>
-			</h2>
-
+			</h1>
 			<!-- Editorial Subtitle -->
 			<p
 				class="kinetic-item mt-2.5 md:mt-4 font-display italic font-light text-lg sm:text-xl md:text-2xl text-[#DDB474] max-w-[54ch]"

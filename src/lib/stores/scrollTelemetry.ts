@@ -43,7 +43,7 @@ export const CHAPTER_SCROLL_ANCHORS: SpatialChapterAnchor[] = [
 		shortLabel: '1975 · Handshake',
 		title: 'The Handshake',
 		startProgress: 0.0,
-		endProgress: 0.15,
+		endProgress: 0.17,
 		startYear: 1975,
 		endYear: 1980,
 		accentColor: '#C89B57'
@@ -53,8 +53,8 @@ export const CHAPTER_SCROLL_ANCHORS: SpatialChapterAnchor[] = [
 		chapterNumber: 'CHAPTER I',
 		shortLabel: '1981 · Orbit',
 		title: 'Learning to Live There',
-		startProgress: 0.15,
-		endProgress: 0.3,
+		startProgress: 0.17,
+		endProgress: 0.27,
 		startYear: 1981,
 		endYear: 1998,
 		accentColor: '#C89B57'
@@ -64,8 +64,8 @@ export const CHAPTER_SCROLL_ANCHORS: SpatialChapterAnchor[] = [
 		chapterNumber: 'CHAPTER II',
 		shortLabel: '1990 · Deep Sight',
 		title: 'Eyes on the Universe',
-		startProgress: 0.3,
-		endProgress: 0.45,
+		startProgress: 0.27,
+		endProgress: 0.37,
 		startYear: 1990,
 		endYear: 2005,
 		accentColor: '#C89B57'
@@ -75,8 +75,8 @@ export const CHAPTER_SCROLL_ANCHORS: SpatialChapterAnchor[] = [
 		chapterNumber: 'CHAPTER III',
 		shortLabel: '2006 · Heliopause',
 		title: 'The Long Reach',
-		startProgress: 0.45,
-		endProgress: 0.6,
+		startProgress: 0.37,
+		endProgress: 0.47,
 		startYear: 2006,
 		endYear: 2015,
 		accentColor: '#C89B57'
@@ -86,8 +86,8 @@ export const CHAPTER_SCROLL_ANCHORS: SpatialChapterAnchor[] = [
 		chapterNumber: 'CHAPTER IV',
 		shortLabel: '2015 · Reusability',
 		title: 'The Reusable Revolution',
-		startProgress: 0.6,
-		endProgress: 0.74,
+		startProgress: 0.47,
+		endProgress: 0.57,
 		startYear: 2015,
 		endYear: 2020,
 		accentColor: '#C89B57'
@@ -97,8 +97,8 @@ export const CHAPTER_SCROLL_ANCHORS: SpatialChapterAnchor[] = [
 		chapterNumber: 'CHAPTER V',
 		shortLabel: '2021 · Golden Age',
 		title: 'The New Golden Age',
-		startProgress: 0.74,
-		endProgress: 0.88,
+		startProgress: 0.57,
+		endProgress: 0.67,
 		startYear: 2021,
 		endYear: 2026,
 		accentColor: '#C89B57'
@@ -108,7 +108,7 @@ export const CHAPTER_SCROLL_ANCHORS: SpatialChapterAnchor[] = [
 		chapterNumber: 'EPILOGUE',
 		shortLabel: '2075 · Horizon',
 		title: 'The Next Fifty Years',
-		startProgress: 0.88,
+		startProgress: 0.67,
 		endProgress: 1.0,
 		startYear: 2026,
 		endYear: 2075,
@@ -125,22 +125,24 @@ interface TrajectoryWaypoint {
 
 /**
  * Piecewise logarithmic & power-law trajectory waypoints mapping scrollProgress (0 -> 1)
- * from 222 km Low Earth Orbit (Apollo-Soyuz, 1975) through Cislunar space, Mars (1.5 AU),
- * Jupiter/Saturn (9.5 AU), Termination Shock (94 AU), Pluto/Heliopause (121.6 AU),
- * Present-Day Voyager 1 (~169.8 AU / ~23h 34m light-time), out to the 340 AU Centennial Horizon (2075).
+ * across the compact 8–12vh landing page trailer cut: from 222 km Low Earth Orbit (Apollo-Soyuz, 1975)
+ * through Cislunar space, Mars (1.5 AU), Jupiter/Saturn (9.5 AU), Termination Shock (94 AU),
+ * Pluto/Heliopause (121.6 AU), Present-Day Voyager 1 (~169.8 AU / ~23h 34m light-time),
+ * out to the 340 AU Centennial Horizon (2075) and the Finale Pull-Back.
  */
 const TRAJECTORY_WAYPOINTS: TrajectoryWaypoint[] = [
 	{ progress: 0.0, year: 1975.0, distanceAu: LEO_ALTITUDE_AU, mode: 'log' }, // 222 km LEO (Apollo-Soyuz)
-	{ progress: 0.04, year: 1976.0, distanceAu: 384_400 / AU_IN_KM, mode: 'log' }, // 384,400 km Moon (1.28 ls)
-	{ progress: 0.09, year: 1976.6, distanceAu: 1.52368, mode: 'log' }, // 1.52 AU Mars (Viking 1 & 2)
-	{ progress: 0.15, year: 1980.9, distanceAu: 9.53707, mode: 'log' }, // 9.54 AU Saturn (Voyager 1)
-	{ progress: 0.3, year: 1994.0, distanceAu: 58.0, mode: 'power' }, // Outer Solar System / Kuiper approach
-	{ progress: 0.45, year: 2005.0, distanceAu: 94.0, mode: 'power' }, // Termination Shock & Cassini at Saturn
-	{ progress: 0.54, year: 2012.6, distanceAu: 121.6, mode: 'power' }, // Heliopause Crossing (Aug 25, 2012)
-	{ progress: 0.6, year: 2015.7, distanceAu: 133.3, mode: 'power' }, // New Horizons Pluto & LIGO GW150914
-	{ progress: 0.74, year: 2020.5, distanceAu: 152.0, mode: 'power' }, // Reusable Era & Event Horizon
-	{ progress: 0.88, year: 2026.0, distanceAu: 169.8, mode: 'power' }, // Present-Day Voyager 1 (~23h 32m light-time)
-	{ progress: 1.0, year: 2075.0, distanceAu: 340.0, mode: 'power' } // 2075 Centennial Horizon (340 AU)
+	{ progress: 0.05, year: 1976.0, distanceAu: 384_400 / AU_IN_KM, mode: 'log' }, // 384,400 km Moon (1.28 ls)
+	{ progress: 0.1, year: 1976.6, distanceAu: 1.52368, mode: 'log' }, // 1.52 AU Mars (Viking 1 & 2)
+	{ progress: 0.17, year: 1980.9, distanceAu: 9.53707, mode: 'log' }, // 9.54 AU Saturn (Voyager 1)
+	{ progress: 0.27, year: 1994.0, distanceAu: 58.0, mode: 'power' }, // Outer Solar System / Kuiper approach
+	{ progress: 0.37, year: 2005.0, distanceAu: 94.0, mode: 'power' }, // Termination Shock & Cassini at Saturn
+	{ progress: 0.43, year: 2012.6, distanceAu: 121.6, mode: 'power' }, // Heliopause Crossing (Aug 25, 2012)
+	{ progress: 0.47, year: 2015.7, distanceAu: 133.3, mode: 'power' }, // New Horizons Pluto & LIGO GW150914
+	{ progress: 0.57, year: 2020.5, distanceAu: 152.0, mode: 'power' }, // Reusable Era & Event Horizon
+	{ progress: 0.67, year: 2026.0, distanceAu: 169.8, mode: 'power' }, // Present-Day Voyager 1 (~23h 32m light-time)
+	{ progress: 0.77, year: 2075.0, distanceAu: 340.0, mode: 'power' }, // 2075 Centennial Horizon (340 AU)
+	{ progress: 1.0, year: 2075.0, distanceAu: 340.0, mode: 'power' } // Finale Pull-Back & Continue the Journey
 ];
 
 /**

@@ -642,14 +642,13 @@
 
 					<!-- Action Buttons: Inspect Full Specs Inline OR Jump to Narrative Section -->
 					<div class="mt-4 flex flex-wrap items-center gap-3 pt-3 border-t border-[rgba(232,230,225,0.10)]">
-						<button
-							type="button"
-							onclick={() => scrollToSection(activeMilestone.id)}
+						<a
+							href={`/chapters/${activeMilestone.chapterId}#${activeMilestone.id}`}
 							class="flex-1 inline-flex items-center justify-center gap-2 border border-[#C89B57] bg-[rgba(200,155,87,0.12)] px-3 py-2 font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1] hover:bg-[rgba(200,155,87,0.22)] transition-colors duration-500 cursor-pointer"
 						>
-							<span>JUMP TO NARRATIVE SECTION</span>
-							<span>→</span>
-						</button>
+							<span>OPEN IN CHAPTER ({activeChapterForMilestone.chapterNumber})</span>
+							<span>↗</span>
+						</a>
 
 						<button
 							type="button"
@@ -705,16 +704,13 @@
 							<span class="hidden sm:inline text-[rgba(232,230,225,0.6)] leading-snug">
 								{formatMissionDistance(m.distanceFromEarthKm)}
 							</span>
-							<button
-								type="button"
-								onclick={(e) => {
-									e.stopPropagation();
-									scrollToSection(m.id);
-								}}
+							<a
+								href={`/chapters/${m.chapterId}#${m.id}`}
+								onclick={(e) => e.stopPropagation()}
 								class="text-[#C89B57] hover:text-[#DDB474] cursor-pointer"
 							>
-								READ →
-							</button>
+								OPEN ↗
+							</a>
 						</div>
 					</div>
 				{/each}
