@@ -15,6 +15,13 @@ export interface TelemetryState {
 	spatialRegionLabel: string;
 	signalPowerDbm: number;
 	rtgPowerWatts: number;
+	inFinale: boolean;
+}
+
+export const chapterDirectoryOpenStore: Writable<boolean> = writable<boolean>(false);
+
+export function openChapterDirectory(): void {
+	chapterDirectoryOpenStore.set(true);
 }
 
 export const AU_IN_KM = 149_597_870.7;
@@ -287,7 +294,8 @@ let liveAccumulatedKm = 0;
 function buildTelemetryState(
 	scrollProgress: number,
 	activeChapterId?: string,
-	activeMilestoneId?: string
+	activeMilestoneId?: string,
+	inFinale: boolean = false
 ): TelemetryState {
 	const clampedProgress = Math.max(0, Math.min(1, Number.isFinite(scrollProgress) ? scrollProgress : 0));
 	const { distanceAu: baseDistanceAu, year } = interpolateSpatialTrajectory(clampedProgress);
@@ -323,7 +331,8 @@ function buildTelemetryState(
 		cameraAltitudeFormatted,
 		spatialRegionLabel,
 		signalPowerDbm,
-		rtgPowerWatts
+		rtgPowerWatts,
+		inFinale
 	};
 }
 
@@ -338,13 +347,15 @@ export const telemetryStore: Writable<TelemetryState> = writable<TelemetryState>
 export function updateScrollTelemetry(
 	progress: number,
 	activeChapterId?: string,
-	activeMilestoneId?: string
+	activeMilestoneId?: string,
+	inFinale?: boolean
 ): void {
 	telemetryStore.update((prev) =>
 		buildTelemetryState(
 			progress,
 			activeChapterId,
-			activeMilestoneId ?? prev.activeMilestoneId
+			activeMilestoneId ?? prev.activeMilestoneId,
+			inFinale ?? prev.inFinale
 		)
 	);
 }

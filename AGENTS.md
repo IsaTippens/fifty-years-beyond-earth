@@ -2,11 +2,10 @@
 
 ## Core Legibility, Typography & Interactive Scene Invariants
 
-1. **12px effective type floor, including inside SVGs**:
-   - Enforce an effective rendered font-size floor across every viewport width (`1440px` desktop down to `390px` mobile): **12px minimum for any label**, **11px minimum for captions**, including `<text>` inside SVGs.
-   - Because SVG `<text>` scales with its `viewBox`, always compute or counter-scale the effective rendered pixel size at the SVG's actual rendered width (or place the SVG in an `overflow-x-auto` container with `min-w-[viewBoxWidth]` / move labels to HTML overlays positioned in CSS pixels) so no label ever drops below 12px effective rendered height or requires squinting at arm's length.
+1. **Balanced SVG & Telemetry Typography (Desktop Restraint + Mobile 11–12px Floor)**:
+   - Keep mobile (`< 768px`) labels at an effective rendered floor of **~11–12px** (`12px` primary labels, `11px` captions), including `<text>` inside SVGs.
+   - On desktop (`>= 768px`), keep schematic, Oort Cloud, pull-back, and finale marker labels restrained (~20–30% smaller than oversized mobile-floor raw scaling) and build hierarchy with **weight** (`600` vs `400`), **tracking** (`letter-spacing`), and **opacity** (`0.94` vs `0.62`) — not raw size.
    - Over bright imagery (such as the Milky Way galactic plane), pair labels with a soft dark scrim/halo (`paint-order: stroke fill`, drop-shadow, or translucent `#050607` backing). On mobile (`< 768px`) in the Milky Way finale, display only the primary `YOU ARE HERE · SOL` and `VOYAGER 1 & 2` labels by default; reveal secondary galactic/stellar labels on tap (`[LABELS +]`).
-
 2. **No undismissable overlay may block an interactive scene**:
    - No panel may permanently cover an interactive 3D WebGL scene (`SaturnCassiniScene.svelte`, `ExoplanetOrrery.svelte`).
    - Position any desktop telemetry/caption overlays strictly at the outer margins of the 3D viewport, clear of the visual focal point.
@@ -17,7 +16,7 @@
 ## Architecture & Provenance Invariants
 
 - **Routes**:
-  - `/` — Fast cinematic trailer cut (`HeroSection` → 7-beat `LandingChapterStrip` → `FinalePullBack` → `"Continue the Journey"` chapter index grid) in ~8–12 viewport heights.
+  - `/` — Fast cinematic trailer cut (`HeroSection` → 7-beat `LandingChapterStrip` with framed plates & alternating layout + 3D Solar System waypoints → 3-beat `FinalePullBack`: Distance Alone → Quote Alone → Slow 4vh Milky Way Condensation; no trailing index grid).
   - `/chapters/[slug]` — Seven dynamic chapter deep-dive routes (`prologue`, `ch1-living-there`, `ch2-eyes-universe`, `ch3-long-reach`, `ch4-reusable-revolution`, `ch5-new-golden-age`, `epilogue`) containing 100% of the narrative prose, 29 milestones, schematics, deep-dive drawers, videos, 3D set pieces, and primary citations, with slim top bar and Prev/Next chapter navigation.
   - `/colophon` — Consolidated sources archive grouped by chapter, full `ASSETS.md` attributions, and the `BuiltByAiPanel` architecture showcase.
 - **Dedupe & Provenance**: Keep `ASSETS.md`, `SOURCES.md`, and all licenses/credits intact; never duplicate hero imagery across adjacent landing beats.

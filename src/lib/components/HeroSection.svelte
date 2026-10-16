@@ -57,7 +57,7 @@
 	class="relative min-h-[78vh] md:min-h-screen w-full overflow-hidden pt-16 pb-8 md:pt-28 md:pb-16 flex flex-col justify-between"
 	aria-label="Fifty Years Beyond Earth Hero Opener"
 >
-	<!-- Subtle Full-Bleed Archival Photograph Backdrop (ISS Earth Limb at Orbital Sunset) -->
+	<!-- Subtle Archival Airglow Whisper + Localized Left Scrim so 3D Earth is Prominent & Unmistakable -->
 	<div class="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
 		<picture class="block h-full w-full">
 			<source
@@ -75,14 +75,14 @@
 				alt="Earth's atmospheric limb and airglow at orbital sunset photographed from the International Space Station"
 				fetchpriority="high"
 				decoding="async"
-				class="hero-ken-burns h-full w-full object-cover object-center opacity-48 mix-blend-screen"
-				style="filter: saturate(0.88) contrast(1.12) brightness(1.10);"
+				class="hero-ken-burns h-full w-full object-cover object-center opacity-22 mix-blend-screen"
+				style="filter: saturate(0.88) contrast(1.12) brightness(1.05);"
 			/>
 		</picture>
-		<!-- Multi-Stop Dark Documentary Gradient Scrim -->
+		<!-- Localized Left-Side Typography Scrim leaving Right/Horizon Open for the 3D Earth Globe -->
 		<div
 			class="absolute inset-0"
-			style="background: linear-gradient(180deg, rgba(5,6,7,0.78) 0%, rgba(5,6,7,0.34) 45%, rgba(5,6,7,0.88) 100%);"
+			style="background: radial-gradient(ellipse 64% 72% at 26% 48%, rgba(5,6,7,0.82) 0%, rgba(5,6,7,0.42) 56%, rgba(5,6,7,0.06) 100%), linear-gradient(180deg, rgba(5,6,7,0.55) 0%, rgba(5,6,7,0.05) 45%, rgba(5,6,7,0.38) 100%);"
 		></div>
 	</div>
 

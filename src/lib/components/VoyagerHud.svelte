@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import {
 		telemetryStore,
+		chapterDirectoryOpenStore,
 		CHAPTER_SCROLL_ANCHORS,
 		startLiveVoyagerTicker,
 		updateScrollTelemetry,
@@ -56,8 +57,8 @@
 		currentPathname;
 		telemetryDrawerOpen = false;
 		chapterMenuOpen = false;
+		chapterDirectoryOpenStore.set(false);
 	});
-
 	const activeChapterMeta = $derived(
 		CHAPTER_SCROLL_ANCHORS.find((c) => c.chapterId === $telemetryStore.activeChapterId) ??
 			CHAPTER_SCROLL_ANCHORS[0]
@@ -101,7 +102,26 @@
 			1,
 			document.documentElement.scrollHeight - window.innerHeight
 		);
-		const rawProgress = Math.max(0, Math.min(1, window.scrollY / docHeight));
+
+		let rawProgress = Math.max(0, Math.min(1, window.scrollY / docHeight));
+		let inFinale = false;
+
+		const finaleEl = document.getElementById('finale-pullback');
+		if (finaleEl) {
+			const finaleRect = finaleEl.getBoundingClientRect();
+			const finaleTopDoc = finaleRect.top + window.scrollY;
+			const voyageEndScrollY = Math.max(1, finaleTopDoc - window.innerHeight * 0.08);
+			if (window.scrollY <= voyageEndScrollY) {
+				rawProgress = Math.max(0, Math.min(0.77, (window.scrollY / voyageEndScrollY) * 0.77));
+			} else {
+				const finaleSpan = Math.max(1, docHeight - voyageEndScrollY);
+				rawProgress = Math.min(
+					1,
+					0.77 + ((window.scrollY - voyageEndScrollY) / finaleSpan) * 0.23
+				);
+			}
+			inFinale = finaleRect.top <= window.innerHeight * 0.08;
+		}
 
 		let detectedChapterId: string | undefined;
 		let detectedMilestoneId: string | undefined;
@@ -125,7 +145,7 @@
 			}
 		}
 
-		updateScrollTelemetry(rawProgress, detectedChapterId, detectedMilestoneId);
+		updateScrollTelemetry(rawProgress, detectedChapterId, detectedMilestoneId, inFinale);
 	}
 
 	function handleScrollSync() {
@@ -184,6 +204,13 @@
 
 	onMount(() => {
 		const stopTicker = startLiveVoyagerTicker();
+		const unsubDirectory = chapterDirectoryOpenStore.subscribe((open) => {
+			if (open) {
+				chapterMenuOpen = true;
+				telemetryDrawerOpen = false;
+				chapterDirectoryOpenStore.set(false);
+			}
+		});
 		syncScrollTelemetryNow();
 		window.addEventListener('scroll', handleScrollSync, { passive: true });
 		window.addEventListener('resize', handleScrollSync, { passive: true });
@@ -198,6 +225,7 @@
 
 		return () => {
 			stopTicker();
+			unsubDirectory();
 			if (scrollRafId !== 0) {
 				window.cancelAnimationFrame(scrollRafId);
 				scrollRafId = 0;
@@ -209,9 +237,15 @@
 	});
 </script>
 
-<!-- BORDERLESS, QUIET DOCUMENTARY TOP BAR (CHROME DIET) -->
+<!-- BORDERLESS, QUIET DOCUMENTARY TOP BAR (CHROME DIET — FADES OUT COMPLETELY IN FINALE) -->
 <header
-	class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-[#050607] via-[#050607]/92 to-transparent"
+	data-testid="top-nav-header"
+	class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-[#050607] via-[#050607]/92 to-transparent transition-opacity duration-500 {isLandingPage &&
+	$telemetryStore.inFinale &&
+	!chapterMenuOpen &&
+	!telemetryDrawerOpen
+		? 'opacity-0 pointer-events-none'
+		: 'opacity-100'}"
 	aria-label="Fifty Years Beyond Earth Navigation & Telemetry HUD"
 >
 	<div class="mx-auto max-w-[1440px] px-3 sm:px-8 lg:px-12">
@@ -540,14 +574,20 @@
 
 <!-- WHISPER-THIN 1PX RIGHT-EDGE SPATIAL SCALE RAIL (LANDING PAGE ONLY) -->
 {#if isLandingPage}
+	{@const railNormalizedProgress = Math.max(0, Math.min(1, $telemetryStore.scrollProgress / 0.77))}
 	<aside
-		class="hidden lg:flex fixed right-6 top-24 bottom-12 z-30 flex-col items-end justify-between pointer-events-none select-none transition-opacity duration-500 {$telemetryStore.scrollProgress >
-		0.76
+		data-testid="spatial-scale-rail"
+		class="hidden lg:flex fixed right-6 top-24 bottom-12 z-30 flex-col items-end justify-between pointer-events-none select-none transition-opacity duration-500 {$telemetryStore.inFinale ||
+		$telemetryStore.scrollProgress > 0.75
 			? 'opacity-0'
 			: 'opacity-100'}"
 		aria-label="Logarithmic Spatial Distance Scale Rail"
 	>
-		<div class="relative flex-1 w-40 pointer-events-auto">
+		<div
+			class="relative flex-1 w-40 {$telemetryStore.inFinale || $telemetryStore.scrollProgress > 0.75
+				? 'pointer-events-none'
+				: 'pointer-events-auto'}"
+		>
 			<!-- 1px Vertical Hairline Spine -->
 			<div class="absolute right-0 top-0 bottom-0 w-px bg-[#E8E6E1]/14"></div>
 
@@ -558,7 +598,7 @@
 						? 0
 						: idx === CHAPTER_SCROLL_ANCHORS.length - 1
 							? 1
-							: ch.startProgress}
+							: Math.min(1, ch.startProgress / 0.77)}
 				{@const isActive = $telemetryStore.activeChapterId === ch.chapterId}
 				<button
 					type="button"
@@ -586,7 +626,7 @@
 
 			<!-- Subtle #C89B57 Active Progress Dot -->
 			<div
-				style={`top: ${($telemetryStore.scrollProgress * 100).toFixed(2)}%`}
+				style={`top: ${(railNormalizedProgress * 100).toFixed(2)}%`}
 				class="absolute right-0 translate-x-[2px] -translate-y-1/2 h-[5px] w-[5px] rounded-full bg-[#C89B57] pointer-events-none transition-all duration-300"
 			></div>
 		</div>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { telemetryStore, openChapterDirectory } from '$lib/stores/scrollTelemetry';
 
 	const AU_PER_LY = 63_241.077;
 
@@ -125,7 +126,7 @@
 		}
 	];
 
-	// Deterministic background dust/cometary particles for Oort Cloud & Orion Arm
+	// Deterministic background cometary particles for Oort Cloud
 	const OORT_MOTES = Array.from({ length: 72 }, (_, i) => {
 		const goldenAngle = i * 137.50776405;
 		const frac = (i + 0.5) / 72;
@@ -133,8 +134,36 @@
 		return {
 			au: Math.pow(10, logAu),
 			angleRad: (goldenAngle * Math.PI) / 180,
-			size: 0.75 + (i % 3) * 0.4,
-			alpha: 0.18 + ((i * 7) % 10) * 0.032
+			size: 0.7 + (i % 3) * 0.35,
+			alpha: 0.16 + ((i * 7) % 10) * 0.03
+		};
+	});
+
+	// Deterministic condensing galactic starfield (190 stars concentrated along the galactic plane)
+	// that emerges first during Beat 3 before the Milky Way band resolves
+	const CONDENSING_GALAXY_STARS = Array.from({ length: 190 }, (_, i) => {
+		const s1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+		const s2 = Math.sin(i * 93.9898 + 19.133) * 29183.1234;
+		const s3 = Math.sin(i * 41.3312 + 53.719) * 19283.7412;
+		const u1 = s1 - Math.floor(s1);
+		const u2 = s2 - Math.floor(s2);
+		const u3 = s3 - Math.floor(s3);
+
+		// Concentrate 65% of stars near the diagonal galactic plane band
+		const isBandStar = i % 3 !== 0;
+		const along = (u1 - 0.5) * 960;
+		const spread = isBandStar ? (u2 - 0.5) * (u3 * 220) : (u2 - 0.5) * 860;
+		const angle = -0.32; // Matches Gaia galactic plane orientation
+		const x = 500 + along * Math.cos(angle) - spread * Math.sin(angle);
+		const y = 500 + along * Math.sin(angle) + spread * Math.cos(angle);
+
+		return {
+			x: Math.max(20, Math.min(980, x)),
+			y: Math.max(20, Math.min(980, y)),
+			r: 0.55 + (i % 4) * 0.38,
+			threshold: (i / 190) * 0.65, // Staggered condensation threshold
+			color: i % 5 === 0 ? '#C89B57' : i % 3 === 0 ? '#DDB474' : '#E8E6E1',
+			maxAlpha: 0.28 + (u3 * 0.58)
 		};
 	});
 
@@ -152,6 +181,11 @@
 
 	function svgPx(targetCssPx: number): number {
 		return Number((targetCssPx * svgUnitPerPx).toFixed(2));
+	}
+
+	// Rebalanced label sizes: ~22–28% smaller on desktop while preserving the 11–12px effective mobile floor
+	function labelPx(desktopCssPx: number, mobileCssPx: number): number {
+		return svgPx(isMobile ? mobileCssPx : desktopCssPx);
 	}
 
 	function clamp01(v: number): number {
@@ -175,91 +209,123 @@
 		};
 	}
 
-	// Continuous logarithmic zoom factor requested in specification:
-	// scale = Math.pow(10, -smoothP * 9)
-	const zoomScale = $derived(Math.pow(10, -smoothP * 9));
+	// =========================================================================
+	// THREE DISTINCT PINNED BEATS CHOREOGRAPHY (smoothP: 0.00 -> 1.00)
+	// Total section height is 800vh (700vh pinned scrub travel):
+	//   BEAT A (0.00 -> 0.17): DISTANCE ALONE (~1.2vh scrub)
+	//   BEAT B (0.20 -> 0.37): THE QUOTE ALONE (~1.2vh scrub)
+	//   BEAT C (0.40 -> 1.00): THE GALAXY CONDENSATION (~4.2vh scrub)
+	//     - C1 (0.40 -> 0.72): Stars & Pull-Back Shells (Heliosphere -> Oort -> Orion Arm) condense first
+	//     - C2 (0.55 -> 0.86): Milky Way Galactic Band slowly resolves out of the starfield
+	//     - C3 (0.80 -> 0.94): Final Galactic Markers & Labels fade in last; 0.94 -> 1.00 settled
+	// =========================================================================
 
-	// Camera field-of-view radius in AU mapped continuously from smoothP:
-	// At smoothP = 0.15 -> ~280 AU (Heliosphere + Voyager 1/2 fill the stage)
-	// At smoothP = 0.45 -> ~140,000 AU (Oort Cloud fills the stage)
-	// At smoothP = 0.66 -> ~1.1e8 AU (~1,800 ly: Local Bubble -> Kepler-90 -> Orion Arm)
-	// At smoothP = 0.90 -> ~6.32e9 AU (100,000 ly: Full Milky Way Disk)
+	// BEAT A: DISTANCE ALONE (0.00 -> 0.17)
+	const distanceBeatOpacity = $derived(
+		smoothP < 0.015
+			? smoothstep(0.0, 0.015, Math.max(0.015, smoothP + 0.015))
+			: 1 - smoothstep(0.13, 0.175, smoothP)
+	);
+	const distanceBeatTranslateY = $derived(-smoothstep(0.12, 0.175, smoothP) * 14);
+
+	// BEAT B: THE QUOTE ALONE (0.20 -> 0.37)
+	const quoteBeatOpacity = $derived(bellWindow(0.195, 0.235, 0.335, 0.38, smoothP));
+	const quoteBeatTranslateY = $derived(
+		(1 - smoothstep(0.195, 0.24, smoothP)) * 14 - smoothstep(0.335, 0.38, smoothP) * 12
+	);
+
+	// BEAT C: THE GALAXY CONDENSATION (0.40 -> 1.00, 4.2+ viewport heights of pinned scrub)
+	const galaxyPhaseProgress = $derived(clamp01((smoothP - 0.40) / 0.60));
+
+	// Continuous logarithmic zoom factor across Beat C:
+	const zoomScale = $derived(Math.pow(10, -galaxyPhaseProgress * 9));
+
+	// Camera field-of-view radius in AU mapped continuously from galaxyPhaseProgress (0 -> 1):
+	// gP = 0.05 -> ~280 AU (Heliosphere + Voyager 1/2)
+	// gP = 0.28 -> ~140,000 AU (Oort Cloud)
+	// gP = 0.50 -> ~1.1e8 AU (Local Stellar Neighborhood & Orion Arm)
+	// gP = 0.78+ -> ~6.32e9 AU (100,000 ly: Full Milky Way Disk)
 	const cameraOuterAu = $derived.by(() => {
-		const pNorm = clamp01((smoothP - 0.14) / 0.78);
-		// Span 9 orders of magnitude anchored by zoomScale = 10^(-smoothP * 9)
+		const pNorm = clamp01(galaxyPhaseProgress / 0.76);
 		const scaleFactor = Math.pow(10, -pNorm * 8.35) * (0.95 + 0.05 * zoomScale);
 		return 28.0 / Math.max(1e-10, scaleFactor);
 	});
 
-	// Convert any physical distance in AU to screen radius (in our 1000x1000 SVG coordinate space)
-	// We blend projective radial scaling with subtle logarithmic compression so inner shells stay
-	// crisp while outer shells sweep smoothly from the perimeter to the pinpoint center.
 	function auToRadiusPx(distanceAu: number, currentOuterAu: number): number {
 		const ratio = distanceAu / Math.max(1e-6, currentOuterAu);
 		if (ratio <= 0) return 0;
-		// Power-law / projective hybrid keeps concentric shells proportional while avoiding abrupt pop-in
 		const r = 340 * Math.pow(ratio, 0.42);
 		return Math.min(1800, r);
 	}
 
 	// Focal origin in the 1000x1000 SVG coordinate system:
-	// Centered at (500, 500) during Heliosphere -> Oort -> Local Stars, then smoothly drifts
-	// to Sol's position in the Orion–Cygnus Arm (~26,000 ly from Galactic Center: x=618, y=556)
-	const focalTransfer = $derived(smoothstep(0.68, 0.86, smoothP));
+	// Centered at (500, 500) during early condensation, smoothly drifting to Sol's true
+	// Orion Arm position (618, 556) as the galactic band resolves
+	const focalTransfer = $derived(smoothstep(0.56, 0.78, smoothP));
 	const solX = $derived(500 + focalTransfer * 118);
 	const solY = $derived(500 + focalTransfer * 56);
 
-	// Beat opacities following exact choreography windows
-	// Beat 1: 0.00 - 0.18 (Near-Black Opening)
-	const beat1Opacity = $derived(
-		smoothP < 0.02
-			? smoothstep(0.0, 0.02, Math.max(0.02, smoothP + 0.02))
-			: 1 - smoothstep(0.11, 0.18, smoothP)
-	);
-	const beat1TranslateY = $derived(-smoothstep(0.1, 0.18, smoothP) * 18);
+	// Sub-layer opacities inside Beat C (0.40 -> 1.00):
+	// 1. Stars condense first (0.40 -> 0.72)
+	const starsCondenseProgress = $derived(smoothstep(0.40, 0.72, smoothP));
+	const diagramOpacity = $derived(smoothstep(0.40, 0.45, smoothP));
 
-	// Beat 2: 0.15 - 0.38 (The Heliosphere, 10^2 AU)
-	const beat2Opacity = $derived(bellWindow(0.13, 0.19, 0.33, 0.40, smoothP));
+	// Pull-back cartography shells during early/mid Beat C:
+	const heliosphereLayerOpacity = $derived(bellWindow(0.40, 0.44, 0.53, 0.58, smoothP));
+	const oortLayerOpacity = $derived(bellWindow(0.49, 0.54, 0.63, 0.68, smoothP));
+	const orionArmLayerOpacity = $derived(bellWindow(0.60, 0.65, 0.76, 0.82, smoothP));
 
-	// Beat 3: 0.35 - 0.58 (The Oort Cloud, 10^4 - 10^5 AU)
-	const beat3Opacity = $derived(bellWindow(0.33, 0.40, 0.53, 0.60, smoothP));
+	// 2. Milky Way galactic band slowly resolves (0.55 -> 0.86) with cubic easing
+	const rawBandResolve = $derived(smoothstep(0.55, 0.86, smoothP));
+	const bandResolveOpacity = $derived(Math.pow(rawBandResolve, 1.75));
+	const panoramaScale = $derived(1.24 - 0.24 * smoothstep(0.54, 0.94, smoothP));
+	const panoramaBrightness = $derived(0.52 + 0.36 * smoothstep(0.55, 0.88, smoothP));
+	const panoramaContrast = $derived(1.32 - 0.17 * smoothstep(0.55, 0.88, smoothP));
 
-	// Beat 4: 0.55 - 0.78 (Local Stellar Neighborhood & The Orion Arm, 10^1 - 10^3 ly)
-	const beat4Opacity = $derived(bellWindow(0.53, 0.60, 0.72, 0.79, smoothP));
+	// 3. Final galactic markers & labels fade in last (0.80 -> 0.93) and hold settled (0.93 -> 1.00)
+	const youAreHereOpacity = $derived(smoothstep(0.80, 0.92, smoothP));
+	const settledChaptersLinkOpacity = $derived(smoothstep(0.90, 0.96, smoothP));
 
-	// Beat 5: 0.72 - 1.00 (Full Milky Way Panorama & Final Line, 100,000 ly)
-	const beat5Opacity = $derived(smoothstep(0.71, 0.86, smoothP));
-	const panoramaScale = $derived(1.38 - 0.38 * smoothstep(0.72, 0.98, smoothP));
-	const youAreHereOpacity = $derived(smoothstep(0.76, 0.88, smoothP));
-	const finalQuoteOpacity = $derived(smoothstep(0.82, 0.93, smoothP));
-	const finalQuoteTranslateY = $derived((1 - smoothstep(0.82, 0.93, smoothP)) * 18);
-
-	// Overall spatial diagram visibility (active from Beat 2 through Beat 5)
-	const diagramOpacity = $derived(smoothstep(0.12, 0.18, smoothP));
-
-	// Live telemetry scale readout for top-left quiet indicator (fades out before final closing state so Beat 5 is pure)
-	const scaleReadoutOpacity = $derived(bellWindow(0.14, 0.19, 0.76, 0.84, smoothP));
+	// Quiet telemetry scale header during the Heliosphere -> Oort -> Orion Arm pull-back (fades out before galaxy settles)
+	const scaleReadoutOpacity = $derived(bellWindow(0.41, 0.45, 0.74, 0.80, smoothP));
 
 	const currentScaleDescriptor = $derived.by(() => {
-		if (smoothP < 0.36) {
+		if (smoothP < 0.53) {
 			return {
-				phase: 'BEAT II // THE HELIOSPHERE',
+				phase: 'PULL-BACK I // THE HELIOSPHERE',
 				scale: '10² AU · INTERSTELLAR BOUNDARY',
 				detail: 'HELIOPAUSE 121.6 AU · VOYAGER 1 AT 169.8 AU'
 			};
 		}
-		if (smoothP < 0.56) {
+		if (smoothP < 0.63) {
 			return {
-				phase: 'BEAT III // THE OORT CLOUD',
+				phase: 'PULL-BACK II // THE OORT CLOUD',
 				scale: '10⁴ – 10⁵ AU · COMETARY RESERVOIR',
 				detail: '2,000 – 100,000 AU · GRAVITATIONAL DOMINANCE OF SOL'
 			};
 		}
 		return {
-			phase: 'BEAT IV // STELLAR NEIGHBORHOOD & ORION ARM',
-			scale: '10¹ – 10³ LIGHT-YEARS · LOCAL SPIRAL SPUR',
+			phase: 'PULL-BACK III // ORION–CYGNUS SPIRAL ARM',
+			scale: '10¹ – 10³ LIGHT-YEARS · LOCAL STELLAR NEIGHBORHOOD',
 			detail: 'ALPHA CENTAURI (4.37 LY) TO KEPLER-90 (2,790 LY)'
 		};
+	});
+
+	// Active finale beat identifier for deterministic testing & accessibility
+	const activeFinaleBeat = $derived.by(() => {
+		if (smoothP < 0.19) return 'distance-alone';
+		if (smoothP < 0.39) return 'quote-alone';
+		if (smoothP < 0.82) return 'galaxy-condensing';
+		return 'galaxy-settled';
+	});
+
+	// Live ticking final distance formatting for Beat A (DISTANCE ALONE)
+	const finalDistanceKmFormatted = $derived.by(() => {
+		// Base 340.0 AU centennial horizon + live Voyager odometer delta
+		const baseCentennialKm = 340.0 * 149_597_870.7;
+		const liveOffsetKm = Math.max(0, $telemetryStore.voyagerDistanceKm - 169.8 * 149_597_870.7);
+		const totalKm = Math.floor(baseCentennialKm + ( liveOffsetKm % 100_000 ));
+		return totalKm.toLocaleString('en-US');
 	});
 
 	function computeTargetProgress() {
@@ -280,7 +346,7 @@
 			computeTargetProgress();
 			const delta = targetP - smoothP;
 			if (Math.abs(delta) > 0.0001) {
-				smoothP += delta * 0.12;
+				smoothP += delta * 0.14;
 			} else {
 				smoothP = targetP;
 			}
@@ -302,17 +368,20 @@
 <section
 	id="finale-pullback"
 	bind:this={sectionEl}
-	aria-label="The Pull-Back: From the Heliosphere to the Milky Way Galaxy"
-	class="relative w-full min-h-[200vh] md:min-h-[260vh] bg-[#050607] select-none"
+	data-finale-beat={activeFinaleBeat}
+	data-finale-progress={smoothP.toFixed(3)}
+	aria-label="The Finale: Final Distance, Closing Quote, and Milky Way Galaxy Reveal"
+	class="relative w-full min-h-[760vh] md:min-h-[820vh] bg-[#050607] select-none"
 >
-	<!-- Sticky Full-Viewport Stage -->
+	<!-- Sticky Full-Viewport Pinned Stage -->
 	<div class="sticky top-0 z-20 h-screen w-full overflow-hidden bg-[#050607]">
 		<!-- =====================================================================
-		     LAYER 1: REAL ESA GAIA / NASA SVS ALL-SKY MILKY WAY PANORAMA (Beat 5)
+		     BEAT 3 (c) — LAYER 1: ESA GAIA MILKY WAY PANORAMA (Slow Eased Condensation)
 		     ===================================================================== -->
 		<div
+			data-testid="finale-galaxy-panorama"
 			class="absolute inset-0 pointer-events-none will-change-transform"
-			style={`opacity: ${beat5Opacity.toFixed(4)}; transform: scale(${panoramaScale.toFixed(4)});`}
+			style={`opacity: ${bandResolveOpacity.toFixed(4)}; transform: scale(${panoramaScale.toFixed(4)});`}
 		>
 			<picture class="block h-full w-full">
 				<source
@@ -330,7 +399,8 @@
 					alt="ESA Gaia all-sky panorama of the Milky Way galaxy showing the galactic core, dust lanes, and Orion spiral arm"
 					loading="lazy"
 					decoding="async"
-					class="h-full w-full object-cover object-center finale-gaia-grade"
+					class="h-full w-full object-cover object-center"
+					style={`filter: saturate(0.90) contrast(${panoramaContrast.toFixed(3)}) brightness(${panoramaBrightness.toFixed(3)});`}
 				/>
 			</picture>
 
@@ -346,7 +416,7 @@
 		</div>
 
 		<!-- =====================================================================
-		     LAYER 2: CONTINUOUS LOGARITHMIC PULL-BACK CARTOGRAPHY (SVG)
+		     BEAT 3 (c) — LAYER 2: CONDENSING STARFIELD, PULL-BACK SHELLS & MARKERS
 		     ===================================================================== -->
 		<svg
 			viewBox="0 0 1000 1000"
@@ -356,14 +426,12 @@
 			aria-hidden="true"
 		>
 			<defs>
-				<!-- Warm Amber Heliosphere Core Glow -->
 				<radialGradient id="heliosphere-glow" cx="50%" cy="50%" r="50%">
 					<stop offset="0%" stop-color="#C89B57" stop-opacity="0.34" />
 					<stop offset="55%" stop-color="#C89B57" stop-opacity="0.08" />
 					<stop offset="100%" stop-color="#C89B57" stop-opacity="0" />
 				</radialGradient>
 
-				<!-- Spherical Oort Cloud Shell Gradient -->
 				<radialGradient id="oort-shell-gradient" cx="50%" cy="50%" r="50%">
 					<stop offset="0%" stop-color="#E8E6E1" stop-opacity="0" />
 					<stop offset="35%" stop-color="#E8E6E1" stop-opacity="0.03" />
@@ -372,7 +440,6 @@
 					<stop offset="100%" stop-color="#E8E6E1" stop-opacity="0" />
 				</radialGradient>
 
-				<!-- Orion-Cygnus Spiral Arm Luminous Spur Gradient -->
 				<linearGradient id="orion-arm-band" x1="0%" y1="0%" x2="100%" y2="100%">
 					<stop offset="0%" stop-color="#E8E6E1" stop-opacity="0" />
 					<stop offset="28%" stop-color="#E8E6E1" stop-opacity="0.065" />
@@ -381,14 +448,35 @@
 					<stop offset="100%" stop-color="#E8E6E1" stop-opacity="0" />
 				</linearGradient>
 
-				<!-- Soft Dark Documentary Scrim / Drop-Shadow Filter for Bright Galactic Band -->
 				<filter id="finale-label-shadow" x="-30%" y="-40%" width="160%" height="180%">
-					<feDropShadow dx="0" dy="1" stdDeviation="4" flood-color="#050607" flood-opacity="0.96" />
-					<feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#050607" flood-opacity="0.92" />
+					<feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#050607" flood-opacity="0.96" />
+					<feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#050607" flood-opacity="0.92" />
 				</filter>
 			</defs>
+
+			<!-- PHASE C1: Condensing Galactic Field Stars (Stars emerge first out of the dark!) -->
+			{#if starsCondenseProgress > 0.005}
+				<g data-testid="finale-condensing-stars">
+					{#each CONDENSING_GALAXY_STARS as star, idx (idx)}
+						{@const starLocalAlpha =
+							smoothstep(star.threshold, Math.min(1, star.threshold + 0.35), starsCondenseProgress) *
+							star.maxAlpha *
+							(1 - bandResolveOpacity * 0.45)}
+						{#if starLocalAlpha > 0.01}
+							<circle
+								cx={500 + (star.x - 500) * (1.12 - 0.12 * starsCondenseProgress)}
+								cy={500 + (star.y - 500) * (1.12 - 0.12 * starsCondenseProgress)}
+								r={star.r}
+								fill={star.color}
+								fill-opacity={starLocalAlpha}
+							/>
+						{/if}
+					{/each}
+				</g>
+			{/if}
+
 			<!-- Subtle Astrometric Crosshair Reference Axes centered on Sol -->
-			<g opacity={Math.max(0, 0.22 * (1 - beat5Opacity))}>
+			<g opacity={Math.max(0, 0.2 * (1 - bandResolveOpacity))}>
 				<line
 					x1={solX - 460}
 					y1={solY}
@@ -410,14 +498,12 @@
 			</g>
 
 			<!-- =================================================================
-			     BEAT 4 LAYER: ORION-CYGNUS SPIRAL ARM & LOCAL STELLAR NEIGHBORHOOD
-			     (0.55 - 0.78)
+			     ORION–CYGNUS SPIRAL ARM & LOCAL STELLAR NEIGHBORHOOD
 			     ================================================================= -->
-			{#if beat4Opacity > 0.005}
+			{#if orionArmLayerOpacity > 0.005}
 				{@const rLocalBubble = auToRadiusPx(300 * AU_PER_LY, cameraOuterAu)}
 				{@const rOrionArmScale = auToRadiusPx(3_500 * AU_PER_LY, cameraOuterAu)}
-				<g opacity={beat4Opacity}>
-					<!-- Orion–Cygnus Spiral Arm Sweeping Band passing through Sol -->
+				<g opacity={orionArmLayerOpacity}>
 					<g transform={`translate(${solX}, ${solY})`}>
 						<path
 							d={`M ${-rOrionArmScale * 1.65} ${-rOrionArmScale * 0.95} Q ${-rOrionArmScale * 0.25} ${-rOrionArmScale * 0.12}, 0 0 T ${rOrionArmScale * 1.55} ${rOrionArmScale * 0.85}`}
@@ -431,10 +517,9 @@
 							fill="none"
 							stroke="#C89B57"
 							stroke-opacity="0.28"
-							stroke-width="1"
+							stroke-width="0.9"
 							stroke-dasharray="4 6"
 						/>
-						<!-- Sagittarius–Carina & Perseus Neighboring Spiral Arm Hints -->
 						<path
 							d={`M ${-rOrionArmScale * 1.4} ${rOrionArmScale * 0.55} Q 0 ${rOrionArmScale * 0.95}, ${rOrionArmScale * 1.4} ${rOrionArmScale * 1.48}`}
 							fill="none"
@@ -455,13 +540,14 @@
 						{#if showSecondaryLabels && rOrionArmScale > 45 && rOrionArmScale < 520}
 							<text
 								x={isMobile ? 0 : rOrionArmScale * 0.35}
-								y={rOrionArmScale * 0.24 - svgPx(10)}
+								y={rOrionArmScale * 0.24 - svgPx(8)}
 								text-anchor={isMobile ? 'middle' : 'start'}
 								fill="#DDB474"
-								fill-opacity="0.92"
+								fill-opacity="0.90"
 								font-family="JetBrains Mono, monospace"
-								font-size={svgPx(12.5)}
-								letter-spacing={svgPx(1.5)}
+								font-size={labelPx(9.4, 12.0)}
+								font-weight="600"
+								letter-spacing={svgPx(1.2)}
 								class="finale-svg-label"
 								filter="url(#finale-label-shadow)"
 							>
@@ -470,7 +556,6 @@
 						{/if}
 					</g>
 
-					<!-- Local Bubble Shell (~300 ly cavity) -->
 					{#if rLocalBubble > 8 && rLocalBubble < 650}
 						<circle
 							cx={solX}
@@ -485,13 +570,14 @@
 						{#if showSecondaryLabels && rLocalBubble > 42 && rLocalBubble < 410}
 							<text
 								x={solX}
-								y={solY + rLocalBubble + svgPx(16)}
+								y={solY + rLocalBubble + svgPx(14)}
 								text-anchor="middle"
 								fill="#E8E6E1"
-								fill-opacity="0.78"
+								fill-opacity="0.65"
 								font-family="JetBrains Mono, monospace"
-								font-size={svgPx(11.5)}
-								letter-spacing={svgPx(1.4)}
+								font-size={labelPx(8.6, 11.2)}
+								font-weight="400"
+								letter-spacing={svgPx(1.0)}
 								class="finale-svg-label"
 								filter="url(#finale-label-shadow)"
 							>
@@ -500,7 +586,6 @@
 						{/if}
 					{/if}
 
-					<!-- Nearby Stellar Neighbors -->
 					{#each NEARBY_STARS as star (star.id)}
 						{@const rStar = auToRadiusPx(star.distanceAu, cameraOuterAu)}
 						{#if rStar > 6 && rStar < 620}
@@ -508,7 +593,6 @@
 							{@const labelRight = Math.cos((star.angleDeg * Math.PI) / 180) >= 0}
 							{@const starVis = bellWindow(8, 22, 430, 560, rStar)}
 							<g opacity={starVis}>
-								<!-- Faint radial distance ring -->
 								<circle
 									cx={solX}
 									cy={solY}
@@ -518,7 +602,6 @@
 									stroke-opacity="0.09"
 									stroke-width="0.7"
 								/>
-								<!-- Line from Sol toward star -->
 								<line
 									x1={solX}
 									y1={solY}
@@ -528,51 +611,51 @@
 									stroke-opacity="0.22"
 									stroke-width="0.75"
 								/>
-								<!-- Star point -->
-								<circle cx={pt.x} cy={pt.y} r="3" fill={star.color} />
+								<circle cx={pt.x} cy={pt.y} r="2.6" fill={star.color} />
 								<circle
 									cx={pt.x}
 									cy={pt.y}
-									r="7"
+									r="6"
 									fill="none"
 									stroke={star.color}
 									stroke-opacity="0.4"
-									stroke-width="0.8"
+									stroke-width="0.75"
 								/>
-								<!-- Leader tick + Telemetry Callout (Desktop default; Mobile on tap) -->
 								{#if showSecondaryLabels}
 									<line
-										x1={pt.x + (labelRight ? 8 : -8)}
+										x1={pt.x + (labelRight ? 7 : -7)}
 										y1={pt.y}
-										x2={pt.x + (labelRight ? 24 : -24)}
+										x2={pt.x + (labelRight ? 20 : -20)}
 										y2={pt.y}
 										stroke={star.color}
-										stroke-opacity="0.65"
-										stroke-width="1"
+										stroke-opacity="0.6"
+										stroke-width="0.85"
 									/>
 									<text
-										x={isMobile ? Math.min(680, Math.max(320, pt.x)) : pt.x + (labelRight ? 28 : -28)}
-										y={pt.y - svgPx(4)}
+										x={isMobile ? Math.min(680, Math.max(320, pt.x)) : pt.x + (labelRight ? 24 : -24)}
+										y={pt.y - svgPx(3)}
 										text-anchor={isMobile ? 'middle' : labelRight ? 'start' : 'end'}
 										fill="#F2F0EC"
-										fill-opacity="0.96"
+										fill-opacity="0.92"
 										font-family="JetBrains Mono, monospace"
-										font-size={svgPx(12.5)}
-										letter-spacing={svgPx(1.2)}
+										font-size={labelPx(9.4, 12.0)}
+										font-weight="500"
+										letter-spacing={svgPx(1.0)}
 										class="finale-svg-label"
 										filter="url(#finale-label-shadow)"
 									>
 										{star.name} · <tspan fill="#DDB474">{star.distanceLy.toLocaleString('en-US')} LY</tspan>
 									</text>
 									<text
-										x={isMobile ? Math.min(680, Math.max(320, pt.x)) : pt.x + (labelRight ? 28 : -28)}
-										y={pt.y + svgPx(12)}
+										x={isMobile ? Math.min(680, Math.max(320, pt.x)) : pt.x + (labelRight ? 24 : -24)}
+										y={pt.y + svgPx(9)}
 										text-anchor={isMobile ? 'middle' : labelRight ? 'start' : 'end'}
 										fill="#E8E6E1"
-										fill-opacity="0.78"
+										fill-opacity="0.62"
 										font-family="JetBrains Mono, monospace"
-										font-size={svgPx(11.5)}
-										letter-spacing={svgPx(1.0)}
+										font-size={labelPx(8.5, 11.0)}
+										font-weight="400"
+										letter-spacing={svgPx(0.75)}
 										class="finale-svg-label"
 										filter="url(#finale-label-shadow)"
 									>
@@ -586,15 +669,13 @@
 			{/if}
 
 			<!-- =================================================================
-			     BEAT 3 LAYER: THE OORT CLOUD (2,000 - 100,000 AU)
-			     (0.35 - 0.58)
+			     THE OORT CLOUD (2,000 - 100,000 AU)
 			     ================================================================= -->
-			{#if beat3Opacity > 0.005}
+			{#if oortLayerOpacity > 0.005}
 				{@const rHillsInner = auToRadiusPx(2_000, cameraOuterAu)}
 				{@const rHillsOuter = auToRadiusPx(20_000, cameraOuterAu)}
 				{@const rOortOuter = auToRadiusPx(100_000, cameraOuterAu)}
-				<g opacity={beat3Opacity}>
-					<!-- Spherical Outer Oort Cloud Halo -->
+				<g opacity={oortLayerOpacity}>
 					{#if rOortOuter > 4}
 						<circle
 							cx={solX}
@@ -609,12 +690,11 @@
 							fill="none"
 							stroke="#C89B57"
 							stroke-opacity="0.45"
-							stroke-width="1"
+							stroke-width="0.95"
 							stroke-dasharray="3 5"
 						/>
 					{/if}
 
-					<!-- Inner Hills Cloud Torus -->
 					{#if rHillsOuter > 4}
 						<circle
 							cx={solX}
@@ -622,8 +702,8 @@
 							r={rHillsOuter}
 							fill="none"
 							stroke="#E8E6E1"
-							stroke-opacity="0.28"
-							stroke-width="0.85"
+							stroke-opacity="0.26"
+							stroke-width="0.8"
 							stroke-dasharray="2 4"
 						/>
 					{/if}
@@ -634,12 +714,11 @@
 							r={rHillsInner}
 							fill="none"
 							stroke="#E8E6E1"
-							stroke-opacity="0.18"
-							stroke-width="0.7"
+							stroke-opacity="0.16"
+							stroke-width="0.65"
 						/>
 					{/if}
 
-					<!-- Cometary Reservoir Dust Motes -->
 					{#each OORT_MOTES as mote, idx (idx)}
 						{@const rMote = auToRadiusPx(mote.au, cameraOuterAu)}
 						{#if rMote > 5 && rMote < 560}
@@ -653,7 +732,6 @@
 						{/if}
 					{/each}
 
-					<!-- Oort Shell Callout Labels -->
 					{#if showSecondaryLabels}
 						{#each OORT_SHELLS as oort (oort.id)}
 							{@const rShell = auToRadiusPx(oort.outerAu, cameraOuterAu)}
@@ -661,46 +739,48 @@
 								{@const pt = polarToCartesian(solX, solY, rShell, oort.angleDeg)}
 								{@const labelVis = bellWindow(28, 52, 370, 450, rShell)}
 								<g opacity={labelVis}>
-									<circle cx={pt.x} cy={pt.y} r="2.6" fill="#C89B57" />
+									<circle cx={pt.x} cy={pt.y} r="2.2" fill="#C89B57" />
 									<line
 										x1={pt.x}
 										y1={pt.y}
-										x2={pt.x + 22}
-										y2={pt.y - 16}
+										x2={pt.x + 18}
+										y2={pt.y - 13}
 										stroke="#C89B57"
-										stroke-opacity="0.7"
-										stroke-width="1"
+										stroke-opacity="0.65"
+										stroke-width="0.85"
 									/>
 									<line
-										x1={pt.x + 22}
-										y1={pt.y - 16}
-										x2={pt.x + 62}
-										y2={pt.y - 16}
+										x1={pt.x + 18}
+										y1={pt.y - 13}
+										x2={pt.x + 52}
+										y2={pt.y - 13}
 										stroke="#C89B57"
-										stroke-opacity="0.7"
-										stroke-width="1"
+										stroke-opacity="0.65"
+										stroke-width="0.85"
 									/>
 									<text
-										x={pt.x + 68}
-										y={pt.y - svgPx(15)}
+										x={pt.x + 56}
+										y={pt.y - svgPx(12)}
 										fill="#F2F0EC"
-										fill-opacity="0.96"
+										fill-opacity="0.92"
 										font-family="JetBrains Mono, monospace"
-										font-size={svgPx(12.5)}
-										letter-spacing={svgPx(1.2)}
+										font-size={labelPx(9.4, 12.0)}
+										font-weight="600"
+										letter-spacing={svgPx(1.1)}
 										class="finale-svg-label"
 										filter="url(#finale-label-shadow)"
 									>
 										{oort.label}
 									</text>
 									<text
-										x={pt.x + 68}
+										x={pt.x + 56}
 										y={pt.y - svgPx(1)}
 										fill="#DDB474"
-										fill-opacity="0.92"
+										fill-opacity="0.72"
 										font-family="JetBrains Mono, monospace"
-										font-size={svgPx(11.5)}
-										letter-spacing={svgPx(1.1)}
+										font-size={labelPx(8.5, 11.0)}
+										font-weight="400"
+										letter-spacing={svgPx(0.85)}
 										class="finale-svg-label"
 										filter="url(#finale-label-shadow)"
 									>
@@ -714,15 +794,13 @@
 			{/if}
 
 			<!-- =================================================================
-			     BEAT 2 LAYER: THE HELIOSPHERE (10^2 AU) & VOYAGER 1 / 2
-			     (0.15 - 0.38, contracting into a warm-amber pinpoint in Beat 3)
+			     THE HELIOSPHERE (10^2 AU) & VOYAGER 1 / 2
 			     ================================================================= -->
-			{#if beat2Opacity > 0.005 || beat3Opacity > 0.005}
+			{#if heliosphereLayerOpacity > 0.005 || oortLayerOpacity > 0.005}
 				{@const rHeliopause = auToRadiusPx(121.6, cameraOuterAu)}
 				{@const rTermination = auToRadiusPx(94.0, cameraOuterAu)}
 				{@const rKuiperOuter = auToRadiusPx(50.0, cameraOuterAu)}
-				<g opacity={Math.max(beat2Opacity, beat3Opacity * 0.85)}>
-					<!-- Warm Amber Heliosphere Cavity Glow -->
+				<g opacity={Math.max(heliosphereLayerOpacity, oortLayerOpacity * 0.82)}>
 					{#if rHeliopause > 1.5}
 						<circle
 							cx={solX}
@@ -732,7 +810,6 @@
 						/>
 					{/if}
 
-					<!-- Planetary Orbits (1 AU to 30.1 AU Neptune) -->
 					{#each PLANET_ORBITS as orbit (orbit.name)}
 						{@const rOrbit = auToRadiusPx(orbit.au, cameraOuterAu)}
 						{#if rOrbit > 2.5 && rOrbit < 550}
@@ -742,20 +819,21 @@
 								r={rOrbit}
 								fill="none"
 								stroke="#E8E6E1"
-								stroke-opacity={orbit.showLabel ? 0.22 : 0.11}
-								stroke-width="0.75"
+								stroke-opacity={orbit.showLabel ? 0.20 : 0.10}
+								stroke-width="0.7"
 							/>
 							{#if showSecondaryLabels && orbit.showLabel && orbit.angleDeg !== undefined && rOrbit > 36 && rOrbit < 390}
 								{@const pt = polarToCartesian(solX, solY, rOrbit, orbit.angleDeg)}
-								<circle cx={pt.x} cy={pt.y} r="2.2" fill="#E8E6E1" fill-opacity="0.8" />
+								<circle cx={pt.x} cy={pt.y} r="1.8" fill="#E8E6E1" fill-opacity="0.72" />
 								<text
-									x={pt.x + 8}
-									y={pt.y + 4}
+									x={pt.x + 7}
+									y={pt.y + 3}
 									fill="#E8E6E1"
-									fill-opacity="0.78"
+									fill-opacity="0.62"
 									font-family="JetBrains Mono, monospace"
-									font-size={svgPx(11.5)}
-									letter-spacing={svgPx(1.1)}
+									font-size={labelPx(8.5, 11.0)}
+									font-weight="400"
+									letter-spacing={svgPx(0.85)}
 									class="finale-svg-label"
 									filter="url(#finale-label-shadow)"
 								>
@@ -765,7 +843,6 @@
 						{/if}
 					{/each}
 
-					<!-- Kuiper Belt Outer Edge (50 AU) -->
 					{#if rKuiperOuter > 10 && rKuiperOuter < 500}
 						<circle
 							cx={solX}
@@ -773,13 +850,12 @@
 							r={rKuiperOuter}
 							fill="none"
 							stroke="#E8E6E1"
-							stroke-opacity="0.15"
-							stroke-width="4"
+							stroke-opacity="0.14"
+							stroke-width="3.5"
 							stroke-dasharray="1 5"
 						/>
 					{/if}
 
-					<!-- Termination Shock (94.0 AU) -->
 					{#if rTermination > 4 && rTermination < 540}
 						<circle
 							cx={solX}
@@ -787,21 +863,22 @@
 							r={rTermination}
 							fill="none"
 							stroke="#E8E6E1"
-							stroke-opacity="0.32"
-							stroke-width="0.9"
+							stroke-opacity="0.28"
+							stroke-width="0.8"
 							stroke-dasharray="4 4"
 						/>
 						{#if showSecondaryLabels && rTermination > 58 && rTermination < 380}
 							{@const ptTerm = polarToCartesian(solX, solY, rTermination, -128)}
 							<text
-								x={ptTerm.x - 10}
-								y={ptTerm.y - 6}
+								x={ptTerm.x - 8}
+								y={ptTerm.y - 5}
 								text-anchor="end"
 								fill="#E8E6E1"
-								fill-opacity="0.78"
+								fill-opacity="0.62"
 								font-family="JetBrains Mono, monospace"
-								font-size={svgPx(11.5)}
-								letter-spacing={svgPx(1.2)}
+								font-size={labelPx(8.5, 11.0)}
+								font-weight="400"
+								letter-spacing={svgPx(0.9)}
 								class="finale-svg-label"
 								filter="url(#finale-label-shadow)"
 							>
@@ -810,7 +887,6 @@
 						{/if}
 					{/if}
 
-					<!-- Heliopause Boundary (121.6 AU) -->
 					{#if rHeliopause > 2}
 						<circle
 							cx={solX}
@@ -818,29 +894,31 @@
 							r={rHeliopause}
 							fill="none"
 							stroke="#C89B57"
-							stroke-opacity="0.82"
-							stroke-width={rHeliopause < 12 ? 1.5 : 1.15}
+							stroke-opacity="0.80"
+							stroke-width={rHeliopause < 12 ? 1.4 : 1.05}
 						/>
 						{#if rHeliopause > 48 && rHeliopause < 410}
 							{@const ptHelio = polarToCartesian(solX, solY, rHeliopause, -68)}
-							<circle cx={ptHelio.x} cy={ptHelio.y} r="2.6" fill="#C89B57" />
+							<circle cx={ptHelio.x} cy={ptHelio.y} r="2.2" fill="#C89B57" />
 							<line
 								x1={ptHelio.x}
 								y1={ptHelio.y}
-								x2={ptHelio.x + 20}
-								y2={ptHelio.y - 18}
+								x2={ptHelio.x + 16}
+								y2={ptHelio.y - 14}
 								stroke="#C89B57"
-								stroke-opacity="0.8"
-								stroke-width="1"
+								stroke-opacity="0.75"
+								stroke-width="0.85"
 							/>
 							<text
-								x={isMobile ? solX : ptHelio.x + 26}
-								y={ptHelio.y - svgPx(16)}
+								x={isMobile ? solX : ptHelio.x + 22}
+								y={ptHelio.y - svgPx(13)}
 								text-anchor={isMobile ? 'middle' : 'start'}
 								fill="#DDB474"
+								fill-opacity="0.94"
 								font-family="JetBrains Mono, monospace"
-								font-size={svgPx(12.5)}
-								letter-spacing={svgPx(1.4)}
+								font-size={labelPx(9.4, 12.0)}
+								font-weight="600"
+								letter-spacing={svgPx(1.15)}
 								class="finale-svg-label"
 								filter="url(#finale-label-shadow)"
 							>
@@ -848,31 +926,32 @@
 							</text>
 							{#if showSecondaryLabels}
 								<text
-									x={isMobile ? solX : ptHelio.x + 26}
+									x={isMobile ? solX : ptHelio.x + 22}
 									y={ptHelio.y - svgPx(2)}
 									text-anchor={isMobile ? 'middle' : 'start'}
 									fill="#E8E6E1"
-									fill-opacity="0.76"
+									fill-opacity="0.62"
 									font-family="JetBrains Mono, monospace"
-									font-size={svgPx(11.5)}
-									letter-spacing={svgPx(1.1)}
+									font-size={labelPx(8.5, 11.0)}
+									font-weight="400"
+									letter-spacing={svgPx(0.85)}
 									class="finale-svg-label"
 									filter="url(#finale-label-shadow)"
 								>
 									SOLAR WIND TERMINUS
 								</text>
 							{/if}
-						{:else if rHeliopause >= 3 && rHeliopause <= 48 && beat3Opacity > 0.15}
-							<!-- Pinpoint Heliosphere label during Oort Cloud pull-back (centered below heliopause so it never collides with Voyager 1/2) -->
+						{:else if rHeliopause >= 3 && rHeliopause <= 48 && oortLayerOpacity > 0.15}
 							<text
 								x={solX}
-								y={solY + rHeliopause + svgPx(28)}
+								y={solY + rHeliopause + svgPx(22)}
 								text-anchor="middle"
 								fill="#DDB474"
-								fill-opacity="0.95"
+								fill-opacity="0.90"
 								font-family="JetBrains Mono, monospace"
-								font-size={svgPx(12.5)}
-								letter-spacing={svgPx(1.3)}
+								font-size={labelPx(9.2, 12.0)}
+								font-weight="500"
+								letter-spacing={svgPx(1.05)}
 								class="finale-svg-label"
 								filter="url(#finale-label-shadow)"
 							>
@@ -881,7 +960,6 @@
 						{/if}
 					{/if}
 
-					<!-- Voyager 1 (169.8 AU) & Voyager 2 (142.1 AU) Flagged Outside Heliopause -->
 					{#each INTERSTELLAR_PROBES as probe (probe.id)}
 						{@const rProbe = auToRadiusPx(probe.distanceAu, cameraOuterAu)}
 						{#if rProbe > 16 && rProbe < 420}
@@ -889,46 +967,45 @@
 							{@const isRight = Math.cos((probe.angleDeg * Math.PI) / 180) >= 0 && pt.x < 680}
 							{@const probeVis = bellWindow(16, 36, 390, 460, rProbe)}
 							<g opacity={probeVis}>
-								<!-- Escape trajectory ray from Sol through Heliopause to Probe -->
 								<line
 									x1={solX}
 									y1={solY}
 									x2={pt.x}
 									y2={pt.y}
 									stroke="#C89B57"
-									stroke-opacity="0.42"
-									stroke-width="0.85"
+									stroke-opacity="0.4"
+									stroke-width="0.8"
 									stroke-dasharray="2 3"
 								/>
-								<!-- Target reticle on probe -->
-								<circle cx={pt.x} cy={pt.y} r="3" fill="#C89B57" />
+								<circle cx={pt.x} cy={pt.y} r="2.6" fill="#C89B57" />
 								<circle
 									cx={pt.x}
 									cy={pt.y}
-									r="7.5"
+									r="6.5"
 									fill="none"
 									stroke="#C89B57"
-									stroke-opacity="0.65"
-									stroke-width="0.85"
+									stroke-opacity="0.6"
+									stroke-width="0.8"
 								/>
-								<!-- Callout Hairline -->
 								<line
-									x1={pt.x + (isRight ? 9 : -9)}
+									x1={pt.x + (isRight ? 8 : -8)}
 									y1={pt.y}
-									x2={pt.x + (isRight ? 34 : -34)}
+									x2={pt.x + (isRight ? 28 : -28)}
 									y2={pt.y}
 									stroke="#C89B57"
-									stroke-opacity="0.78"
-									stroke-width="0.9"
+									stroke-opacity="0.72"
+									stroke-width="0.85"
 								/>
 								<text
-									x={isMobile ? solX : pt.x + (isRight ? 38 : -38)}
-									y={pt.y - svgPx(3)}
+									x={isMobile ? solX : pt.x + (isRight ? 32 : -32)}
+									y={pt.y - svgPx(2)}
 									text-anchor={isMobile ? 'middle' : isRight ? 'start' : 'end'}
 									fill="#F2F0EC"
+									fill-opacity="0.94"
 									font-family="JetBrains Mono, monospace"
-									font-size={svgPx(12.5)}
-									letter-spacing={svgPx(1.3)}
+									font-size={labelPx(9.4, 12.0)}
+									font-weight="600"
+									letter-spacing={svgPx(1.05)}
 									class="finale-svg-label"
 									filter="url(#finale-label-shadow)"
 								>
@@ -936,14 +1013,15 @@
 								</text>
 								{#if showSecondaryLabels}
 									<text
-										x={isMobile ? solX : pt.x + (isRight ? 38 : -38)}
-										y={pt.y + svgPx(12)}
+										x={isMobile ? solX : pt.x + (isRight ? 32 : -32)}
+										y={pt.y + svgPx(9)}
 										text-anchor={isMobile ? 'middle' : isRight ? 'start' : 'end'}
 										fill="#E8E6E1"
-										fill-opacity="0.76"
+										fill-opacity="0.62"
 										font-family="JetBrains Mono, monospace"
-										font-size={svgPx(11.5)}
-										letter-spacing={svgPx(1.1)}
+										font-size={labelPx(8.5, 11.0)}
+										font-weight="400"
+										letter-spacing={svgPx(0.8)}
 										class="finale-svg-label"
 										filter="url(#finale-label-shadow)"
 									>
@@ -957,33 +1035,31 @@
 			{/if}
 
 			<!-- =================================================================
-			     PERSISTENT WARM-AMBER SUN PINPOINT & BEAT 5 GALACTIC MARKERS
+			     PERSISTENT WARM-AMBER SUN PINPOINT & FINAL GALACTIC MARKERS (Phase C3)
 			     ================================================================= -->
-			<!-- Sol Amber Point (always anchored at [solX, solY]) -->
 			<g>
 				<circle
 					cx={solX}
 					cy={solY}
-					r={beat5Opacity > 0.5 ? 2.6 : 3.2}
+					r={bandResolveOpacity > 0.5 ? 2.4 : 3.0}
 					fill="#C89B57"
 				/>
 				<circle
 					cx={solX}
 					cy={solY}
-					r={beat5Opacity > 0.5 ? 8.5 : 6.5}
+					r={bandResolveOpacity > 0.5 ? 7.5 : 6.0}
 					fill="none"
 					stroke="#C89B57"
-					stroke-opacity="0.55"
-					stroke-width="0.9"
+					stroke-opacity="0.52"
+					stroke-width="0.85"
 				/>
 			</g>
 
-			<!-- BEAT 5: WHISPER-THIN #C89B57 WARM-AMBER TARGET MARKER & 1PX HAIRLINES -->
+			<!-- PHASE C3: FINAL GALACTIC MARKERS (Fade in last after Milky Way band resolves) -->
 			{#if youAreHereOpacity > 0.005}
-				<!-- Voyager 1 & 2 Micro-Tick literally 2px beside Sol ("a hair's breadth outside it") -->
 				{@const voyagerTickX = solX + 2.4}
 				{@const voyagerTickY = solY - 1.2}
-				<g opacity={youAreHereOpacity}>
+				<g opacity={youAreHereOpacity} data-testid="finale-galactic-markers">
 					<!-- Galactic Center to Orion Arm Radius Reference (26,000 LY) -->
 					<line
 						x1="500"
@@ -991,21 +1067,22 @@
 						x2={solX}
 						y2={solY}
 						stroke="#C89B57"
-						stroke-opacity="0.26"
-						stroke-width="0.75"
+						stroke-opacity="0.24"
+						stroke-width="0.7"
 						stroke-dasharray="2 5"
 					/>
-					<circle cx="500" cy="500" r="2.8" fill="#E8E6E1" fill-opacity="0.7" />
+					<circle cx="500" cy="500" r="2.4" fill="#E8E6E1" fill-opacity="0.68" />
 					{#if showSecondaryLabels}
 						<text
-							x={isMobile ? 500 : 482}
-							y={isMobile ? solY - svgPx(94) : 486}
+							x={isMobile ? 500 : 484}
+							y={isMobile ? solY - svgPx(88) : 488}
 							text-anchor={isMobile ? 'middle' : 'end'}
 							fill="#F2F0EC"
-							fill-opacity="0.92"
+							fill-opacity="0.80"
 							font-family="JetBrains Mono, monospace"
-							font-size={svgPx(12.5)}
-							letter-spacing={svgPx(1.4)}
+							font-size={labelPx(9.2, 12.0)}
+							font-weight="500"
+							letter-spacing={svgPx(1.15)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
@@ -1017,76 +1094,43 @@
 					<circle
 						cx={solX}
 						cy={solY}
-						r="16"
+						r="14"
 						fill="none"
 						stroke="#C89B57"
-						stroke-opacity="0.5"
-						stroke-width="1"
+						stroke-opacity="0.48"
+						stroke-width="0.9"
 					/>
-					<line
-						x1={solX - 22}
-						y1={solY}
-						x2={solX - 11}
-						y2={solY}
-						stroke="#C89B57"
-						stroke-opacity="0.8"
-						stroke-width="1"
-					/>
-					<line
-						x1={solX + 11}
-						y1={solY}
-						x2={solX + 22}
-						y2={solY}
-						stroke="#C89B57"
-						stroke-opacity="0.8"
-						stroke-width="1"
-					/>
-					<line
-						x1={solX}
-						y1={solY - 22}
-						x2={solX}
-						y2={solY - 11}
-						stroke="#C89B57"
-						stroke-opacity="0.8"
-						stroke-width="1"
-					/>
-					<line
-						x1={solX}
-						y1={solY + 11}
-						x2={solX}
-						y2={solY + 22}
-						stroke="#C89B57"
-						stroke-opacity="0.8"
-						stroke-width="1"
-					/>
+					<line x1={solX - 19} y1={solY} x2={solX - 10} y2={solY} stroke="#C89B57" stroke-opacity="0.75" stroke-width="0.9" />
+					<line x1={solX + 10} y1={solY} x2={solX + 19} y2={solY} stroke="#C89B57" stroke-opacity="0.75" stroke-width="0.9" />
+					<line x1={solX} y1={solY - 19} x2={solX} y2={solY - 10} stroke="#C89B57" stroke-opacity="0.75" stroke-width="0.9" />
+					<line x1={solX} y1={solY + 10} x2={solX} y2={solY + 19} stroke="#C89B57" stroke-opacity="0.75" stroke-width="0.9" />
 
-					<!-- 1px Amber Hairline #1 -> YOU ARE HERE · SOL -->
 					{#if isMobile}
 						<polyline
-							points={`${solX},${solY - 12} ${solX},${solY - svgPx(28)} 500,${solY - svgPx(28)}`}
+							points={`${solX},${solY - 11} ${solX},${solY - svgPx(26)} 500,${solY - svgPx(26)}`}
 							fill="none"
 							stroke="#C89B57"
-							stroke-opacity="0.92"
-							stroke-width="1.4"
+							stroke-opacity="0.88"
+							stroke-width="1.2"
 						/>
 						<rect
-							x={500 - svgPx(115)}
-							y={solY - svgPx(showSecondaryLabels ? 74 : 58)}
-							width={svgPx(230)}
-							height={showSecondaryLabels ? svgPx(44) : svgPx(28)}
-							rx="4"
+							x={500 - svgPx(110)}
+							y={solY - svgPx(showSecondaryLabels ? 70 : 54)}
+							width={svgPx(220)}
+							height={showSecondaryLabels ? svgPx(42) : svgPx(26)}
+							rx="3"
 							fill="#050607"
-							fill-opacity="0.84"
+							fill-opacity="0.82"
 						/>
 						<text
 							x="500"
-							y={solY - svgPx(showSecondaryLabels ? 54 : 39)}
+							y={solY - svgPx(showSecondaryLabels ? 51 : 36)}
 							text-anchor="middle"
 							fill="#DDB474"
 							font-family="JetBrains Mono, monospace"
-							font-size={svgPx(13.5)}
+							font-size={labelPx(10.2, 12.2)}
 							font-weight="600"
-							letter-spacing={svgPx(1.5)}
+							letter-spacing={svgPx(1.3)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
@@ -1095,13 +1139,14 @@
 						{#if showSecondaryLabels}
 							<text
 								x="500"
-								y={solY - svgPx(36)}
+								y={solY - svgPx(34)}
 								text-anchor="middle"
 								fill="#F2F0EC"
-								fill-opacity="0.88"
+								fill-opacity="0.72"
 								font-family="JetBrains Mono, monospace"
-								font-size={svgPx(11.5)}
-								letter-spacing={svgPx(1.1)}
+								font-size={labelPx(8.6, 11.2)}
+								font-weight="400"
+								letter-spacing={svgPx(0.95)}
 								class="finale-svg-label"
 								filter="url(#finale-label-shadow)"
 							>
@@ -1109,33 +1154,32 @@
 							</text>
 						{/if}
 
-						<!-- Second Micro-Tick beside Sol -> VOYAGER 1 & 2 · 0.0027 LY OUT -->
-						<circle cx={voyagerTickX} cy={voyagerTickY} r="2" fill="#DDB474" />
+						<circle cx={voyagerTickX} cy={voyagerTickY} r="1.8" fill="#DDB474" />
 						<polyline
-							points={`${voyagerTickX},${voyagerTickY + 8} ${solX},${solY + svgPx(28)} 500,${solY + svgPx(28)}`}
+							points={`${voyagerTickX},${voyagerTickY + 7} ${solX},${solY + svgPx(26)} 500,${solY + svgPx(26)}`}
 							fill="none"
 							stroke="#C89B57"
-							stroke-opacity="0.88"
-							stroke-width="1.3"
+							stroke-opacity="0.84"
+							stroke-width="1.15"
 						/>
 						<rect
-							x={500 - svgPx(150)}
-							y={solY + svgPx(30)}
-							width={svgPx(300)}
-							height={showSecondaryLabels ? svgPx(44) : svgPx(28)}
-							rx="4"
+							x={500 - svgPx(142)}
+							y={solY + svgPx(28)}
+							width={svgPx(284)}
+							height={showSecondaryLabels ? svgPx(42) : svgPx(26)}
+							rx="3"
 							fill="#050607"
-							fill-opacity="0.84"
+							fill-opacity="0.82"
 						/>
 						<text
 							x="500"
-							y={solY + svgPx(49)}
+							y={solY + svgPx(46)}
 							text-anchor="middle"
 							fill="#F2F0EC"
 							font-family="JetBrains Mono, monospace"
-							font-size={svgPx(12.5)}
+							font-size={labelPx(9.8, 12.0)}
 							font-weight="500"
-							letter-spacing={svgPx(1.1)}
+							letter-spacing={svgPx(1.0)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
@@ -1144,13 +1188,14 @@
 						{#if showSecondaryLabels}
 							<text
 								x="500"
-								y={solY + svgPx(67)}
+								y={solY + svgPx(63)}
 								text-anchor="middle"
 								fill="#E8E6E1"
-								fill-opacity="0.84"
+								fill-opacity="0.68"
 								font-family="JetBrains Mono, monospace"
-								font-size={svgPx(11.5)}
-								letter-spacing={svgPx(1.0)}
+								font-size={labelPx(8.6, 11.2)}
+								font-weight="400"
+								letter-spacing={svgPx(0.9)}
 								class="finale-svg-label"
 								filter="url(#finale-label-shadow)"
 							>
@@ -1159,88 +1204,90 @@
 						{/if}
 					{:else}
 						<polyline
-							points={`${solX},${solY - 3} ${solX + 34},${solY - 58} ${solX + 290},${solY - 58}`}
+							points={`${solX},${solY - 3} ${solX + 30},${solY - 50} ${solX + 235},${solY - 50}`}
 							fill="none"
 							stroke="#C89B57"
-							stroke-opacity="0.9"
-							stroke-width="1.15"
+							stroke-opacity="0.85"
+							stroke-width="0.95"
 						/>
 						<rect
-							x={solX + 32}
-							y={solY - 58 - svgPx(26)}
-							width={svgPx(290)}
-							height={svgPx(46)}
-							rx="3"
+							x={solX + 28}
+							y={solY - 50 - svgPx(20)}
+							width={svgPx(225)}
+							height={svgPx(35)}
+							rx="2"
 							fill="#050607"
-							fill-opacity="0.76"
+							fill-opacity="0.72"
 						/>
 						<text
-							x={solX + 40}
-							y={solY - 58 - svgPx(7)}
+							x={solX + 35}
+							y={solY - 50 - svgPx(5)}
 							fill="#DDB474"
 							font-family="JetBrains Mono, monospace"
-							font-size={svgPx(14.5)}
+							font-size={labelPx(10.2, 12.2)}
 							font-weight="600"
-							letter-spacing={svgPx(1.8)}
+							letter-spacing={svgPx(1.4)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
 							YOU ARE HERE · SOL
 						</text>
 						<text
-							x={solX + 40}
-							y={solY - 58 + svgPx(13)}
+							x={solX + 35}
+							y={solY - 50 + svgPx(9.5)}
 							fill="#F2F0EC"
-							fill-opacity="0.88"
+							fill-opacity="0.65"
 							font-family="JetBrains Mono, monospace"
-							font-size={svgPx(11.5)}
-							letter-spacing={svgPx(1.3)}
+							font-size={labelPx(8.6, 11.2)}
+							font-weight="400"
+							letter-spacing={svgPx(0.95)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
 							ORION–CYGNUS ARM · 26,000 LY FROM CORE
 						</text>
 
-						<!-- Second Micro-Tick just 2px beside Sol -> VOYAGER 1 & 2 · 0.0027 LIGHT-YEARS OUT -->
-						<circle cx={voyagerTickX} cy={voyagerTickY} r="1.6" fill="#DDB474" />
+						<!-- Second Micro-Tick just 2px beside Sol -> VOYAGER 1 & 2 · 0.0027 LY OUT -->
+						<circle cx={voyagerTickX} cy={voyagerTickY} r="1.5" fill="#DDB474" />
 						<polyline
-							points={`${voyagerTickX + 1.5},${voyagerTickY} ${solX + 34},${solY + 46} ${solX + 290},${solY + 46}`}
+							points={`${voyagerTickX + 1.5},${voyagerTickY} ${solX + 30},${solY + 42} ${solX + 245},${solY + 42}`}
 							fill="none"
 							stroke="#C89B57"
-							stroke-opacity="0.8"
-							stroke-width="1.05"
+							stroke-opacity="0.76"
+							stroke-width="0.9"
 						/>
 						<rect
-							x={solX + 32}
-							y={solY + 46 - svgPx(24)}
-							width={svgPx(315)}
-							height={svgPx(46)}
-							rx="3"
+							x={solX + 28}
+							y={solY + 42 - svgPx(19)}
+							width={svgPx(245)}
+							height={svgPx(35)}
+							rx="2"
 							fill="#050607"
-							fill-opacity="0.76"
+							fill-opacity="0.72"
 						/>
 						<text
-							x={solX + 40}
-							y={solY + 46 - svgPx(6)}
+							x={solX + 35}
+							y={solY + 42 - svgPx(4.5)}
 							fill="#F2F0EC"
-							fill-opacity="0.96"
+							fill-opacity="0.94"
 							font-family="JetBrains Mono, monospace"
-							font-size={svgPx(13.5)}
-							font-weight="500"
-							letter-spacing={svgPx(1.5)}
+							font-size={labelPx(9.8, 12.0)}
+							font-weight="600"
+							letter-spacing={svgPx(1.2)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
 							VOYAGER 1 &amp; 2 · <tspan fill="#DDB474">0.0027 LY OUT</tspan>
 						</text>
 						<text
-							x={solX + 40}
-							y={solY + 46 + svgPx(13)}
+							x={solX + 35}
+							y={solY + 42 + svgPx(9.5)}
 							fill="#E8E6E1"
-							fill-opacity="0.82"
+							fill-opacity="0.62"
 							font-family="JetBrains Mono, monospace"
-							font-size={svgPx(11.5)}
-							letter-spacing={svgPx(1.2)}
+							font-size={labelPx(8.6, 11.2)}
+							font-weight="400"
+							letter-spacing={svgPx(0.9)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
@@ -1252,51 +1299,48 @@
 		</svg>
 
 		<!-- =====================================================================
-		     LAYER 3: QUIET TELEMETRY SCALE HEADER (Active during Beats 2–4)
+		     QUIET TELEMETRY SCALE HEADER (Active only during early/mid Pull-Back)
 		     ===================================================================== -->
 		<div
-			class="
-				pointer-events-none absolute top-16 sm:top-20 left-6 right-6 sm:left-10 sm:right-10 lg:left-16 lg:right-48
-				flex flex-wrap items-start justify-between gap-4
-			"
+			class="pointer-events-none absolute top-10 sm:top-12 left-6 right-6 sm:left-10 sm:right-10 lg:left-16 lg:right-16 flex flex-wrap items-start justify-between gap-4"
 			style={`opacity: ${scaleReadoutOpacity.toFixed(4)};`}
 		>
-			<div class="space-y-1 font-mono-tech uppercase">
-				<div class="flex items-center gap-2.5 text-xs tracking-[0.16em] text-[#C89B57]">
+			<div class="space-y-0.5 font-mono-tech uppercase">
+				<div class="flex items-center gap-2 text-[11px] md:text-[10px] font-semibold tracking-[0.16em] text-[#C89B57]">
 					<span class="h-1.5 w-1.5 rounded-full bg-[#C89B57]"></span>
 					<span>{currentScaleDescriptor.phase}</span>
 				</div>
-				<div class="text-xs sm:text-sm tracking-[0.14em] text-[#E8E6E1]/92">
+				<div class="text-[11px] md:text-[10px] tracking-[0.12em] text-[#E8E6E1]/82">
 					{currentScaleDescriptor.scale}
 				</div>
-				<div class="text-[11px] sm:text-xs tracking-[0.14em] text-[#E8E6E1]/68">
+				<div class="text-[11px] md:text-[9px] tracking-[0.10em] text-[#E8E6E1]/54">
 					{currentScaleDescriptor.detail}
 				</div>
 			</div>
 
 			<div class="text-right font-mono-tech uppercase">
-				<div class="text-[11px] tracking-[0.14em] text-[#E8E6E1]/62">
+				<div class="text-[11px] md:text-[9px] tracking-[0.14em] text-[#E8E6E1]/52">
 					LOGARITHMIC SCALE FACTOR
 				</div>
-				<div class="mt-0.5 text-xs tracking-[0.14em] text-[#C89B57]">
-					10<sup class="text-[11px]">−{(smoothP * 9).toFixed(2)}</sup>× · FIELD {(cameraOuterAu >= AU_PER_LY
+				<div class="mt-0.5 text-[11px] md:text-[10px] tracking-[0.12em] text-[#C89B57]">
+					10<sup class="text-[9px]">−{(galaxyPhaseProgress * 9).toFixed(2)}</sup>× · FIELD {(cameraOuterAu >= AU_PER_LY
 						? `${(cameraOuterAu / AU_PER_LY).toFixed(cameraOuterAu / AU_PER_LY >= 100 ? 0 : 1)} LY`
 						: `${Math.round(cameraOuterAu).toLocaleString('en-US')} AU`)}
 				</div>
 			</div>
 		</div>
 
-		<!-- Mobile Tap-to-Reveal Secondary Labels Toggle (Active during Beats 2–5 on Mobile) -->
+		<!-- Mobile Tap-to-Reveal Secondary Labels Toggle (Active during Galaxy Reveal on Mobile) -->
 		{#if isMobile && diagramOpacity > 0.1}
 			<div
-				class="pointer-events-auto absolute bottom-38 left-1/2 -translate-x-1/2 z-30"
+				class="pointer-events-auto absolute bottom-14 left-1/2 -translate-x-1/2 z-30"
 				style={`opacity: ${diagramOpacity.toFixed(3)};`}
 			>
 				<button
 					type="button"
 					data-testid="finale-mobile-secondary-toggle"
 					onclick={() => (showMobileSecondaryLabels = !showMobileSecondaryLabels)}
-					class="cursor-pointer border border-[#C89B57]/60 bg-[#050607]/90 px-3 py-1.5 font-mono-tech text-xs uppercase tracking-[0.12em] text-[#DDB474] backdrop-blur-sm transition-colors hover:border-[#DDB474]"
+					class="cursor-pointer border border-[#C89B57]/60 bg-[#050607]/90 px-3 py-1.5 font-mono-tech text-[11px] uppercase tracking-[0.12em] text-[#DDB474] backdrop-blur-sm transition-colors hover:border-[#DDB474]"
 				>
 					{showMobileSecondaryLabels ? '[LABELS −]' : '[LABELS +]'}
 				</button>
@@ -1304,36 +1348,69 @@
 		{/if}
 
 		<!-- =====================================================================
-		     LAYER 4: BEAT 1 (0.00 - 0.18) — NEAR-BLACK OPENING COPY
+		     BEAT 1 (a): DISTANCE ALONE (0.00 -> 0.17)
+		     The final distance readout is the ONLY element on screen — centered, large,
+		     everything else (including top bar and spatial rail) faded out.
 		     ===================================================================== -->
-		<div
-			class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 sm:px-12"
-			style={`opacity: ${beat1Opacity.toFixed(4)}; transform: translate3d(0, ${beat1TranslateY.toFixed(2)}px, 0);`}
-		>
-			<div class="font-mono-tech text-xs uppercase tracking-[0.18em] text-[#C89B57]/90 text-center">
-				FINAL HORIZON · 340 AU TO 100,000 LIGHT-YEARS · LOGARITHMIC PULL-BACK
-			</div>
-			<p
-				class="max-w-[36ch] text-center font-display font-normal italic leading-[1.24] tracking-[-0.02em] text-[#E8E6E1]"
+		{#if distanceBeatOpacity > 0.002}
+			<div
+				data-testid="finale-beat-distance-alone"
+				class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 sm:px-12 text-center"
+				style={`opacity: ${distanceBeatOpacity.toFixed(4)}; transform: translate3d(0, ${distanceBeatTranslateY.toFixed(2)}px, 0);`}
 			>
-				“Fifty years of fire and radio, and we have barely stepped off the shoreline.”
-			</p>
-		</div>
+				<div class="font-mono-tech text-[11px] md:text-[10px] uppercase tracking-[0.22em] text-[#C89B57]/85">
+					CENTENNIAL HORIZON · 1975–2075 · INTERSTELLAR ODOMETER
+				</div>
+				<div
+					class="mt-3 font-display font-normal text-[#F5F3EE] tracking-[-0.035em] leading-[0.95]"
+					style="font-size: clamp(3.5rem, 11vw, 9.5rem);"
+				>
+					340.0 <span class="text-[#C89B57]">AU</span>
+				</div>
+				<div class="mt-4 font-mono-tech text-xs sm:text-sm tracking-[0.16em] uppercase text-[#E8E6E1]/78">
+					{finalDistanceKmFormatted} KM · <span class="text-[#DDB474]">47H 08M</span> ONE-WAY LIGHT TIME
+				</div>
+			</div>
+		{/if}
 
 		<!-- =====================================================================
-		     LAYER 5: BEAT 5 (smoothP > 0.82) — FINAL CLOSING LINE AT BOTTOM-CENTER
+		     BEAT 2 (b): THE QUOTE ALONE (0.20 -> 0.37)
+		     The closing quote is the SOLE text on screen, centered, nav still hidden.
+		     Never sits under or collides with the top bar.
 		     ===================================================================== -->
-		<div
-			class="pointer-events-none absolute inset-x-0 bottom-12 sm:bottom-16 flex flex-col items-center justify-end px-6 sm:px-12"
-			style={`opacity: ${finalQuoteOpacity.toFixed(4)}; transform: translate3d(0, ${finalQuoteTranslateY.toFixed(2)}px, 0);`}
-		>
-			<p
-				class="max-w-[42ch] text-center font-display font-normal leading-[1.28] tracking-[-0.02em] text-[#E8E6E1]"
-				style="font-size: clamp(1.35rem, 2.4vw, 2.15rem);"
+		{#if quoteBeatOpacity > 0.002}
+			<div
+				data-testid="finale-beat-quote-alone"
+				class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 sm:px-12 text-center"
+				style={`opacity: ${quoteBeatOpacity.toFixed(4)}; transform: translate3d(0, ${quoteBeatTranslateY.toFixed(2)}px, 0);`}
 			>
-				“Four hundred billion suns. Everything we have ever loved is inside that amber point.”
-			</p>
-		</div>
+				<p
+					class="max-w-[36ch] text-center font-display font-normal leading-[1.26] tracking-[-0.02em] text-[#E8E6E1]"
+					style="font-size: clamp(1.5rem, 3.2vw, 2.75rem);"
+				>
+					“Four hundred billion suns. Everything we have ever loved is inside that amber point.”
+				</p>
+			</div>
+		{/if}
+
+		<!-- =====================================================================
+		     DISCREET TEXT-ONLY "Chapters ↗" TRIGGER (Appears only after Galaxy settles)
+		     ===================================================================== -->
+		{#if settledChaptersLinkOpacity > 0.01}
+			<div
+				class="pointer-events-auto absolute bottom-5 right-6 sm:right-10 z-30"
+				style={`opacity: ${settledChaptersLinkOpacity.toFixed(3)};`}
+			>
+				<button
+					type="button"
+					data-testid="finale-discreet-chapters-link"
+					onclick={() => openChapterDirectory()}
+					class="cursor-pointer font-mono-tech text-[11px] md:text-[10px] uppercase tracking-[0.18em] text-[#E8E6E1]/42 hover:text-[#C89B57] transition-colors duration-300 focus:outline-none"
+				>
+					Chapters ↗
+				</button>
+			</div>
+		{/if}
 
 		<!-- Subtle Atmospheric Film Grain Overlay matching site-wide documentary finish -->
 		<div class="finale-film-grain pointer-events-none absolute inset-0"></div>
@@ -1341,14 +1418,10 @@
 </section>
 
 <style>
-	.finale-gaia-grade {
-		filter: saturate(0.90) contrast(1.15) brightness(0.86);
-	}
-
 	.finale-svg-label {
 		paint-order: stroke fill;
-		stroke: rgba(5, 6, 7, 0.92);
-		stroke-width: 4px;
+		stroke: rgba(5, 6, 7, 0.90);
+		stroke-width: 2.5px;
 		stroke-linejoin: round;
 	}
 

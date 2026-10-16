@@ -12,8 +12,8 @@
 	const id = $derived(milestone.id);
 </script>
 
-<div class="w-full overflow-x-auto pb-1">
-	<div class="min-w-[860px] w-full">
+<div class="schematic-svg-container w-full overflow-x-auto pb-1">
+	<div class="min-w-[820px] w-full">
 {#if id === 'apollo-soyuz-1975'}
 	<!-- 01. Apollo-Soyuz APAS-75 Androgynous Docking & Airlock Pressure-Equalization Cross-Section -->
 	<svg viewBox="0 0 800 220" class="w-full h-auto" role="img" aria-label="Apollo-Soyuz APAS-75 Docking Schematic">
@@ -1108,3 +1108,24 @@
 {/if}
 	</div>
 </div>
+
+<style>
+	@media (min-width: 768px) {
+		.schematic-svg-container :global(svg text[font-size='12']) {
+			font-size: 9.2px;
+			font-weight: 600;
+			letter-spacing: 0.07em;
+		}
+		.schematic-svg-container :global(svg text[font-size='11.5']),
+		.schematic-svg-container :global(svg g[font-size='11.5'] text) {
+			font-size: 8.7px;
+			font-weight: 500;
+			letter-spacing: 0.04em;
+		}
+		.schematic-svg-container :global(svg text[font-size='11.2']) {
+			font-size: 8.3px;
+			font-weight: 400;
+			letter-spacing: 0.02em;
+		}
+	}
+</style>

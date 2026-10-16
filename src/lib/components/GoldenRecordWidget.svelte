@@ -904,7 +904,7 @@
 			<div
 				class="relative w-full max-w-[460px] overflow-x-auto border border-[#E8E6E1]/12 bg-[#050607] p-2.5 sm:p-4 flex items-center justify-center"
 			>
-				<div class="min-w-[420px] w-full">
+				<div class="golden-record-svg-wrap min-w-[420px] w-full">
 				<svg
 					viewBox="0 0 500 500"
 					class="w-full h-auto select-none"
@@ -970,7 +970,9 @@
 							fill="#E8E6E1"
 							stroke="none"
 							font-family="monospace"
-							font-size="14.5"
+							font-size="11.2"
+							font-weight="600"
+							letter-spacing="0.08em"
 						>
 							I. STYLUS &amp; 16⅔ RPM
 						</text>
@@ -1011,7 +1013,7 @@
 							fill="#DDB474"
 							stroke="none"
 							font-family="monospace"
-							font-size="13.5"
+							font-size="10.2"
 						>
 							t = 59.5 min
 						</text>
@@ -1027,7 +1029,9 @@
 							fill="#E8E6E1"
 							stroke="none"
 							font-family="monospace"
-							font-size="14.5"
+							font-size="11.2"
+							font-weight="600"
+							letter-spacing="0.08em"
 						>
 							II. VIDEO SCAN
 						</text>
@@ -1036,7 +1040,7 @@
 							points="0,20 8,20 8,32 14,32 14,12 22,22 30,10 38,24 46,16 54,20 62,20 62,32 68,32 68,14 78,24 88,12 96,20 104,20 104,32 110,32 110,16 122,20"
 							stroke-width="1.3"
 						/>
-						<text x="0" y="48" fill="#DDB474" stroke="none" font-family="monospace" font-size="13.5">
+						<text x="0" y="48" fill="#DDB474" stroke="none" font-family="monospace" font-size="10.2">
 							SCAN = 8.0 ms
 						</text>
 
@@ -1070,7 +1074,7 @@
 								fill="#DDB474"
 								stroke="none"
 								font-family="monospace"
-								font-size="13.5"
+								font-size="10.2"
 							>
 								512 LINES · CIRCLE
 							</text>
@@ -1102,11 +1106,12 @@
 							y="16"
 							fill="#E8E6E1"
 							font-family="monospace"
-							font-size="13.5"
+							font-size="10.6"
+							font-weight="600"
 						>
 							²³⁸U CLOCK
 						</text>
-						<text x="26" y="32" fill="#C89B57" font-family="monospace" font-size="13.2">
+						<text x="26" y="32" fill="#C89B57" font-family="monospace" font-size="10.0">
 							t½ = 4.47 Gyr
 						</text>
 					</g>
@@ -1120,7 +1125,9 @@
 							y="-76"
 							fill="#E8E6E1"
 							font-family="monospace"
-							font-size="14.5"
+							font-size="11.2"
+							font-weight="600"
+							letter-spacing="0.08em"
 						>
 							III. 14-PULSAR MAP
 						</text>
@@ -1209,7 +1216,9 @@
 							fill="#E8E6E1"
 							stroke="none"
 							font-family="monospace"
-							font-size="14.5"
+							font-size="11.2"
+							font-weight="600"
+							letter-spacing="0.08em"
 						>
 							IV. ¹H SPIN-FLIP
 						</text>
@@ -1244,7 +1253,7 @@
 							fill="#DDB474"
 							stroke="none"
 							font-family="monospace"
-							font-size="13.5"
+							font-size="10.2"
 						>
 							1420 MHz · 21 cm
 						</text>
@@ -1494,3 +1503,16 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	@media (max-width: 767px) {
+		.golden-record-svg-wrap :global(svg text[font-size='11.2']) {
+			font-size: 14px;
+		}
+		.golden-record-svg-wrap :global(svg text[font-size='10.6']),
+		.golden-record-svg-wrap :global(svg text[font-size='10.2']),
+		.golden-record-svg-wrap :global(svg text[font-size='10.0']) {
+			font-size: 13px;
+		}
+	}
+</style>

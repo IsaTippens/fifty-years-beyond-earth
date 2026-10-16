@@ -353,8 +353,8 @@
 				</div>
 
 				<!-- Responsive SVG Container -->
-				<div class="relative w-full overflow-x-auto pb-1">
-					<div class="min-w-[960px] w-full">
+				<div class="decade-plot-svg-wrap relative w-full overflow-x-auto pb-1">
+					<div class="min-w-[920px] w-full">
 					<svg
 						viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
 						class="w-full h-auto select-none"
@@ -396,8 +396,9 @@
 									y={y + 3.5}
 									text-anchor="end"
 									font-family="var(--font-mono)"
-									font-size="12.5"
-									fill="rgba(232, 230, 225, 0.6)"
+									font-size="9.6"
+									letter-spacing="0.06em"
+									fill="rgba(232, 230, 225, 0.58)"
 								>
 									{band.label}
 								</text>
@@ -422,8 +423,10 @@
 									y={PLOT_HEIGHT - PAD_BOTTOM + 20}
 									text-anchor="middle"
 									font-family="var(--font-mono)"
-									font-size="13"
-									fill={yr === 2026 || yr === 2075 ? '#C89B57' : 'rgba(232, 230, 225, 0.6)'}
+									font-size="10"
+									font-weight={yr === 2026 || yr === 2075 ? '600' : '400'}
+									letter-spacing="0.05em"
+									fill={yr === 2026 || yr === 2075 ? '#C89B57' : 'rgba(232, 230, 225, 0.58)'}
 								>
 									{yr}
 								</text>
@@ -442,7 +445,9 @@
 							x={yearToPlotX(2005)}
 							y={kmToPlotY(94 * AU_IN_KM) - 10}
 							font-family="var(--font-mono)"
-							font-size="13"
+							font-size="10"
+							font-weight="600"
+							letter-spacing="0.08em"
 							fill="#C89B57"
 							opacity="0.88"
 						>
@@ -540,7 +545,9 @@
 										y={Math.max(PAD_TOP + 18, y - 19)}
 										text-anchor="middle"
 										font-family="var(--font-mono)"
-										font-size="12.5"
+										font-size="10"
+										font-weight="500"
+										letter-spacing="0.04em"
 										fill="#E8E6E1"
 									>
 										{calloutText}
@@ -719,3 +726,14 @@
 		</div>
 	</div>
 </section>
+
+<style>
+	@media (max-width: 767px) {
+		.decade-plot-svg-wrap :global(svg text[font-size='10']) {
+			font-size: 12.2px;
+		}
+		.decade-plot-svg-wrap :global(svg text[font-size='9.6']) {
+			font-size: 11.5px;
+		}
+	}
+</style>

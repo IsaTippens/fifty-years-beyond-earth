@@ -141,8 +141,8 @@
 				</span>
 			</div>
 
-			<div class="w-full overflow-x-auto pb-1">
-				<div class="min-w-[960px] w-full">
+			<div class="ai-dag-svg-wrap w-full overflow-x-auto pb-1">
+				<div class="min-w-[920px] w-full">
 					<svg
 						viewBox="0 0 960 245"
 						class="w-full h-auto select-none"
@@ -167,14 +167,16 @@
 								y="26"
 								fill="#C89B57"
 								font-family="var(--font-mono)"
-								font-size="12"
+								font-size="9.8"
+								font-weight="600"
+								letter-spacing="0.08em"
 							>
 								LEAD ORCHESTRATOR
 							</text>
-							<text x="12" y="50" fill="#E8E6E1" font-family="var(--font-mono)" font-size="12">
+							<text x="12" y="50" fill="#E8E6E1" font-family="var(--font-mono)" font-size="9.4">
 								Architecture &amp;
 							</text>
-							<text x="12" y="70" fill="#E8E6E1" font-family="var(--font-mono)" font-size="12">
+							<text x="12" y="70" fill="rgba(232, 230, 225, 0.72)" font-family="var(--font-mono)" font-size="9.4">
 								Type Contracts
 							</text>
 						</g>
@@ -196,7 +198,9 @@
 								y="22"
 								fill="#C89B57"
 								font-family="var(--font-mono)"
-								font-size="12"
+								font-size="9.8"
+								font-weight="600"
+								letter-spacing="0.08em"
 							>
 								WAVE 1: 7 RESEARCH SCOUTS
 							</text>
@@ -223,7 +227,7 @@
 									y={47 + sIdx * 26}
 									fill="#E8E6E1"
 									font-family="var(--font-mono)"
-									font-size="11.5"
+									font-size="9.2"
 								>
 									· {scoutName}
 								</text>
@@ -246,7 +250,9 @@
 								y="22"
 								fill="#C89B57"
 								font-family="var(--font-mono)"
-								font-size="12"
+								font-size="9.8"
+								font-weight="600"
+								letter-spacing="0.08em"
 							>
 								WAVE 2: 5 ENGINEERING AGENTS
 							</text>
@@ -271,7 +277,7 @@
 									y={51 + wIdx * 31}
 									fill="rgba(232, 230, 225, 0.85)"
 									font-family="var(--font-mono)"
-									font-size="11.5"
+									font-size="9.2"
 								>
 									· {workerName}
 								</text>
@@ -295,20 +301,22 @@
 								y="24"
 								fill="#C89B57"
 								font-family="var(--font-mono)"
-								font-size="12"
+								font-size="9.8"
+								font-weight="600"
+								letter-spacing="0.08em"
 							>
 								WAVE 3: LIVE VERIFY
 							</text>
-							<text x="12" y="48" fill="#E8E6E1" font-family="var(--font-mono)" font-size="12">
+							<text x="12" y="48" fill="#E8E6E1" font-family="var(--font-mono)" font-size="9.5" font-weight="500">
 								Headless Chromium
 							</text>
-							<text x="12" y="70" fill="rgba(232, 230, 225, 0.72)" font-family="var(--font-mono)" font-size="11.5">
+							<text x="12" y="70" fill="rgba(232, 230, 225, 0.68)" font-family="var(--font-mono)" font-size="9.2">
 								· Desktop 1440×900
 							</text>
-							<text x="12" y="90" fill="rgba(232, 230, 225, 0.72)" font-family="var(--font-mono)" font-size="11.5">
+							<text x="12" y="90" fill="rgba(232, 230, 225, 0.68)" font-family="var(--font-mono)" font-size="9.2">
 								· Mobile 390×844
 							</text>
-							<text x="12" y="110" fill="#C89B57" font-family="var(--font-mono)" font-size="11.5">
+							<text x="12" y="110" fill="#C89B57" font-family="var(--font-mono)" font-size="9.2" font-weight="600">
 								· 0 Console Errors
 							</text>
 						</g>
@@ -382,3 +390,16 @@
 		</div>
 	</div>
 </section>
+
+<style>
+	@media (max-width: 767px) {
+		.ai-dag-svg-wrap :global(svg text[font-size='9.8']) {
+			font-size: 12px;
+		}
+		.ai-dag-svg-wrap :global(svg text[font-size='9.5']),
+		.ai-dag-svg-wrap :global(svg text[font-size='9.4']),
+		.ai-dag-svg-wrap :global(svg text[font-size='9.2']) {
+			font-size: 11.4px;
+		}
+	}
+</style>
