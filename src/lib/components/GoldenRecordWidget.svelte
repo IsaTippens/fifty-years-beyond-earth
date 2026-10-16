@@ -1503,16 +1503,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	@media (max-width: 767px) {
-		.golden-record-svg-wrap :global(svg text[font-size='11.2']) {
-			font-size: 14px;
-		}
-		.golden-record-svg-wrap :global(svg text[font-size='10.6']),
-		.golden-record-svg-wrap :global(svg text[font-size='10.2']),
-		.golden-record-svg-wrap :global(svg text[font-size='10.0']) {
-			font-size: 13px;
-		}
-	}
-</style>

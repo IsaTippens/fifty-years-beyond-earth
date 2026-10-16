@@ -172,10 +172,8 @@
 	let smoothP = $state(0);
 	let viewportW = $state(typeof window !== 'undefined' ? window.innerWidth : 1440);
 	let viewportH = $state(typeof window !== 'undefined' ? window.innerHeight : 900);
-	let showMobileSecondaryLabels = $state(false);
-
 	const isMobile = $derived(viewportW < 768);
-	const showSecondaryLabels = $derived(!isMobile || showMobileSecondaryLabels);
+	const showSecondaryLabels = true;
 	const stageSquarePx = $derived(Math.max(320, Math.min(viewportW, viewportH)));
 	const svgUnitPerPx = $derived(1000 / stageSquarePx);
 
@@ -183,9 +181,10 @@
 		return Number((targetCssPx * svgUnitPerPx).toFixed(2));
 	}
 
-	// Rebalanced label sizes: ~22–28% smaller on desktop while preserving the 11–12px effective mobile floor
-	function labelPx(desktopCssPx: number, mobileCssPx: number): number {
-		return svgPx(isMobile ? mobileCssPx : desktopCssPx);
+	// Rebalanced label sizes (~25% smaller across desktop & mobile so no toggle button is needed)
+	function labelPx(desktopCssPx: number, mobileCssPx?: number): number {
+		const target = isMobile ? (mobileCssPx ?? desktopCssPx * 0.94) : desktopCssPx;
+		return svgPx(target);
 	}
 
 	function clamp01(v: number): number {
@@ -282,10 +281,11 @@
 	const panoramaBrightness = $derived(0.52 + 0.36 * smoothstep(0.55, 0.88, smoothP));
 	const panoramaContrast = $derived(1.32 - 0.17 * smoothstep(0.55, 0.88, smoothP));
 
-	// 3. Final galactic markers & labels fade in last (0.80 -> 0.93) and hold settled (0.93 -> 1.00)
-	const youAreHereOpacity = $derived(smoothstep(0.80, 0.92, smoothP));
+	// 3. Final galactic markers & closing amber-point quote fade in last (0.80 -> 0.94) and hold settled (0.94 -> 1.00)
+	const youAreHereOpacity = $derived(smoothstep(0.80, 0.91, smoothP));
+	const finalAmberQuoteOpacity = $derived(smoothstep(0.84, 0.94, smoothP));
+	const finalAmberQuoteTranslateY = $derived((1 - smoothstep(0.84, 0.94, smoothP)) * 14);
 	const settledChaptersLinkOpacity = $derived(smoothstep(0.90, 0.96, smoothP));
-
 	// Quiet telemetry scale header during the Heliosphere -> Oort -> Orion Arm pull-back (fades out before galaxy settles)
 	const scaleReadoutOpacity = $derived(bellWindow(0.41, 0.45, 0.74, 0.80, smoothP));
 
@@ -545,7 +545,7 @@
 								fill="#DDB474"
 								fill-opacity="0.90"
 								font-family="JetBrains Mono, monospace"
-								font-size={labelPx(9.4, 12.0)}
+								font-size={labelPx(9.4, 8.4)}
 								font-weight="600"
 								letter-spacing={svgPx(1.2)}
 								class="finale-svg-label"
@@ -575,7 +575,7 @@
 								fill="#E8E6E1"
 								fill-opacity="0.65"
 								font-family="JetBrains Mono, monospace"
-								font-size={labelPx(8.6, 11.2)}
+								font-size={labelPx(8.6, 7.6)}
 								font-weight="400"
 								letter-spacing={svgPx(1.0)}
 								class="finale-svg-label"
@@ -638,7 +638,7 @@
 										fill="#F2F0EC"
 										fill-opacity="0.92"
 										font-family="JetBrains Mono, monospace"
-										font-size={labelPx(9.4, 12.0)}
+										font-size={labelPx(9.4, 8.4)}
 										font-weight="500"
 										letter-spacing={svgPx(1.0)}
 										class="finale-svg-label"
@@ -653,7 +653,7 @@
 										fill="#E8E6E1"
 										fill-opacity="0.62"
 										font-family="JetBrains Mono, monospace"
-										font-size={labelPx(8.5, 11.0)}
+										font-size={labelPx(8.5, 7.5)}
 										font-weight="400"
 										letter-spacing={svgPx(0.75)}
 										class="finale-svg-label"
@@ -759,28 +759,30 @@
 										stroke-width="0.85"
 									/>
 									<text
-										x={pt.x + 56}
-										y={pt.y - svgPx(12)}
+										x={isMobile ? solX : pt.x + 56}
+										y={isMobile ? solY - rShell - svgPx(12) : pt.y - svgPx(12)}
+										text-anchor={isMobile ? 'middle' : 'start'}
 										fill="#F2F0EC"
 										fill-opacity="0.92"
 										font-family="JetBrains Mono, monospace"
-										font-size={labelPx(9.4, 12.0)}
+										font-size={labelPx(9.4, 8.4)}
 										font-weight="600"
-										letter-spacing={svgPx(1.1)}
+										letter-spacing={svgPx(1.0)}
 										class="finale-svg-label"
 										filter="url(#finale-label-shadow)"
 									>
 										{oort.label}
 									</text>
 									<text
-										x={pt.x + 56}
-										y={pt.y - svgPx(1)}
+										x={isMobile ? solX : pt.x + 56}
+										y={isMobile ? solY - rShell - svgPx(2) : pt.y - svgPx(1)}
+										text-anchor={isMobile ? 'middle' : 'start'}
 										fill="#DDB474"
 										fill-opacity="0.72"
 										font-family="JetBrains Mono, monospace"
-										font-size={labelPx(8.5, 11.0)}
+										font-size={labelPx(8.5, 7.5)}
 										font-weight="400"
-										letter-spacing={svgPx(0.85)}
+										letter-spacing={svgPx(0.8)}
 										class="finale-svg-label"
 										filter="url(#finale-label-shadow)"
 									>
@@ -831,7 +833,7 @@
 									fill="#E8E6E1"
 									fill-opacity="0.62"
 									font-family="JetBrains Mono, monospace"
-									font-size={labelPx(8.5, 11.0)}
+									font-size={labelPx(8.5, 7.5)}
 									font-weight="400"
 									letter-spacing={svgPx(0.85)}
 									class="finale-svg-label"
@@ -876,7 +878,7 @@
 								fill="#E8E6E1"
 								fill-opacity="0.62"
 								font-family="JetBrains Mono, monospace"
-								font-size={labelPx(8.5, 11.0)}
+								font-size={labelPx(8.5, 7.5)}
 								font-weight="400"
 								letter-spacing={svgPx(0.9)}
 								class="finale-svg-label"
@@ -916,7 +918,7 @@
 								fill="#DDB474"
 								fill-opacity="0.94"
 								font-family="JetBrains Mono, monospace"
-								font-size={labelPx(9.4, 12.0)}
+								font-size={labelPx(9.4, 8.4)}
 								font-weight="600"
 								letter-spacing={svgPx(1.15)}
 								class="finale-svg-label"
@@ -932,7 +934,7 @@
 									fill="#E8E6E1"
 									fill-opacity="0.62"
 									font-family="JetBrains Mono, monospace"
-									font-size={labelPx(8.5, 11.0)}
+									font-size={labelPx(8.5, 7.5)}
 									font-weight="400"
 									letter-spacing={svgPx(0.85)}
 									class="finale-svg-label"
@@ -949,7 +951,7 @@
 								fill="#DDB474"
 								fill-opacity="0.90"
 								font-family="JetBrains Mono, monospace"
-								font-size={labelPx(9.2, 12.0)}
+								font-size={labelPx(9.2, 8.2)}
 								font-weight="500"
 								letter-spacing={svgPx(1.05)}
 								class="finale-svg-label"
@@ -962,10 +964,10 @@
 
 					{#each INTERSTELLAR_PROBES as probe (probe.id)}
 						{@const rProbe = auToRadiusPx(probe.distanceAu, cameraOuterAu)}
-						{#if rProbe > 16 && rProbe < 420}
+						{#if rProbe > 56 && rProbe < 420 && heliosphereLayerOpacity > 0.02}
 							{@const pt = polarToCartesian(solX, solY, Math.min(rProbe, 310), probe.angleDeg)}
 							{@const isRight = Math.cos((probe.angleDeg * Math.PI) / 180) >= 0 && pt.x < 680}
-							{@const probeVis = bellWindow(16, 36, 390, 460, rProbe)}
+							{@const probeVis = bellWindow(56, 84, 390, 460, rProbe) * heliosphereLayerOpacity}
 							<g opacity={probeVis}>
 								<line
 									x1={solX}
@@ -1003,7 +1005,7 @@
 									fill="#F2F0EC"
 									fill-opacity="0.94"
 									font-family="JetBrains Mono, monospace"
-									font-size={labelPx(9.4, 12.0)}
+									font-size={labelPx(9.4, 8.4)}
 									font-weight="600"
 									letter-spacing={svgPx(1.05)}
 									class="finale-svg-label"
@@ -1019,7 +1021,7 @@
 										fill="#E8E6E1"
 										fill-opacity="0.62"
 										font-family="JetBrains Mono, monospace"
-										font-size={labelPx(8.5, 11.0)}
+										font-size={labelPx(8.5, 7.5)}
 										font-weight="400"
 										letter-spacing={svgPx(0.8)}
 										class="finale-svg-label"
@@ -1072,23 +1074,21 @@
 						stroke-dasharray="2 5"
 					/>
 					<circle cx="500" cy="500" r="2.4" fill="#E8E6E1" fill-opacity="0.68" />
-					{#if showSecondaryLabels}
-						<text
-							x={isMobile ? 500 : 484}
-							y={isMobile ? solY - svgPx(88) : 488}
-							text-anchor={isMobile ? 'middle' : 'end'}
-							fill="#F2F0EC"
-							fill-opacity="0.80"
-							font-family="JetBrains Mono, monospace"
-							font-size={labelPx(9.2, 12.0)}
-							font-weight="500"
-							letter-spacing={svgPx(1.15)}
-							class="finale-svg-label"
-							filter="url(#finale-label-shadow)"
-						>
-							GALACTIC CORE · SGR A*
-						</text>
-					{/if}
+					<text
+						x={isMobile ? 500 : 484}
+						y={isMobile ? solY - svgPx(74) : 488}
+						text-anchor={isMobile ? 'middle' : 'end'}
+						fill="#F2F0EC"
+						fill-opacity="0.78"
+						font-family="JetBrains Mono, monospace"
+						font-size={labelPx(9.2, 9.0)}
+						font-weight="500"
+						letter-spacing={svgPx(1.05)}
+						class="finale-svg-label"
+						filter="url(#finale-label-shadow)"
+					>
+						GALACTIC CORE · SGR A*
+					</text>
 
 					<!-- Target Reticle around Sol in the Orion Arm -->
 					<circle
@@ -1107,101 +1107,97 @@
 
 					{#if isMobile}
 						<polyline
-							points={`${solX},${solY - 11} ${solX},${solY - svgPx(26)} 500,${solY - svgPx(26)}`}
+							points={`${solX},${solY - 10} ${solX},${solY - svgPx(22)} 500,${solY - svgPx(22)}`}
 							fill="none"
 							stroke="#C89B57"
-							stroke-opacity="0.88"
-							stroke-width="1.2"
+							stroke-opacity="0.86"
+							stroke-width="1.05"
 						/>
 						<rect
-							x={500 - svgPx(110)}
-							y={solY - svgPx(showSecondaryLabels ? 70 : 54)}
-							width={svgPx(220)}
-							height={showSecondaryLabels ? svgPx(42) : svgPx(26)}
-							rx="3"
+							x={500 - svgPx(92)}
+							y={solY - svgPx(56)}
+							width={svgPx(184)}
+							height={svgPx(32)}
+							rx="2.5"
 							fill="#050607"
-							fill-opacity="0.82"
+							fill-opacity="0.78"
 						/>
 						<text
 							x="500"
-							y={solY - svgPx(showSecondaryLabels ? 51 : 36)}
+							y={solY - svgPx(42)}
 							text-anchor="middle"
 							fill="#DDB474"
 							font-family="JetBrains Mono, monospace"
-							font-size={labelPx(10.2, 12.2)}
+							font-size={labelPx(10.2, 9.6)}
 							font-weight="600"
-							letter-spacing={svgPx(1.3)}
+							letter-spacing={svgPx(1.15)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
 							YOU ARE HERE · SOL
 						</text>
-						{#if showSecondaryLabels}
-							<text
-								x="500"
-								y={solY - svgPx(34)}
-								text-anchor="middle"
-								fill="#F2F0EC"
-								fill-opacity="0.72"
-								font-family="JetBrains Mono, monospace"
-								font-size={labelPx(8.6, 11.2)}
-								font-weight="400"
-								letter-spacing={svgPx(0.95)}
-								class="finale-svg-label"
-								filter="url(#finale-label-shadow)"
-							>
-								ORION ARM · 26,000 LY
-							</text>
-						{/if}
+						<text
+							x="500"
+							y={solY - svgPx(29)}
+							text-anchor="middle"
+							fill="#F2F0EC"
+							fill-opacity="0.66"
+							font-family="JetBrains Mono, monospace"
+							font-size={labelPx(8.6, 8.2)}
+							font-weight="400"
+							letter-spacing={svgPx(0.85)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							ORION ARM · 26,000 LY
+						</text>
 
-						<circle cx={voyagerTickX} cy={voyagerTickY} r="1.8" fill="#DDB474" />
+						<circle cx={voyagerTickX} cy={voyagerTickY} r="1.6" fill="#DDB474" />
 						<polyline
-							points={`${voyagerTickX},${voyagerTickY + 7} ${solX},${solY + svgPx(26)} 500,${solY + svgPx(26)}`}
+							points={`${voyagerTickX},${voyagerTickY + 6} ${solX},${solY + svgPx(22)} 500,${solY + svgPx(22)}`}
 							fill="none"
 							stroke="#C89B57"
-							stroke-opacity="0.84"
-							stroke-width="1.15"
+							stroke-opacity="0.82"
+							stroke-width="1.0"
 						/>
 						<rect
-							x={500 - svgPx(142)}
-							y={solY + svgPx(28)}
-							width={svgPx(284)}
-							height={showSecondaryLabels ? svgPx(42) : svgPx(26)}
-							rx="3"
+							x={500 - svgPx(118)}
+							y={solY + svgPx(24)}
+							width={svgPx(236)}
+							height={svgPx(32)}
+							rx="2.5"
 							fill="#050607"
-							fill-opacity="0.82"
+							fill-opacity="0.78"
 						/>
 						<text
 							x="500"
-							y={solY + svgPx(46)}
+							y={solY + svgPx(38)}
 							text-anchor="middle"
 							fill="#F2F0EC"
 							font-family="JetBrains Mono, monospace"
-							font-size={labelPx(9.8, 12.0)}
-							font-weight="500"
-							letter-spacing={svgPx(1.0)}
+							font-size={labelPx(9.8, 9.2)}
+							font-weight="600"
+							letter-spacing={svgPx(0.95)}
 							class="finale-svg-label"
 							filter="url(#finale-label-shadow)"
 						>
 							VOYAGER 1 &amp; 2 · <tspan fill="#DDB474">0.0027 LY OUT</tspan>
 						</text>
-						{#if showSecondaryLabels}
-							<text
-								x="500"
-								y={solY + svgPx(63)}
-								text-anchor="middle"
-								fill="#E8E6E1"
-								fill-opacity="0.68"
-								font-family="JetBrains Mono, monospace"
-								font-size={labelPx(8.6, 11.2)}
-								font-weight="400"
-								letter-spacing={svgPx(0.9)}
-								class="finale-svg-label"
-								filter="url(#finale-label-shadow)"
-							>
-								169.8 &amp; 142.1 AU OUTSIDE SOL
-							</text>
-						{/if}
+						<text
+							x="500"
+							y={solY + svgPx(50)}
+							text-anchor="middle"
+							fill="#E8E6E1"
+							fill-opacity="0.64"
+							font-family="JetBrains Mono, monospace"
+							font-size={labelPx(8.6, 8.2)}
+							font-weight="400"
+							letter-spacing={svgPx(0.8)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							169.8 &amp; 142.1 AU OUTSIDE SOL
+						</text>
 					{:else}
 						<polyline
 							points={`${solX},${solY - 3} ${solX + 30},${solY - 50} ${solX + 235},${solY - 50}`}
@@ -1330,22 +1326,6 @@
 			</div>
 		</div>
 
-		<!-- Mobile Tap-to-Reveal Secondary Labels Toggle (Active during Galaxy Reveal on Mobile) -->
-		{#if isMobile && diagramOpacity > 0.1}
-			<div
-				class="pointer-events-auto absolute bottom-14 left-1/2 -translate-x-1/2 z-30"
-				style={`opacity: ${diagramOpacity.toFixed(3)};`}
-			>
-				<button
-					type="button"
-					data-testid="finale-mobile-secondary-toggle"
-					onclick={() => (showMobileSecondaryLabels = !showMobileSecondaryLabels)}
-					class="cursor-pointer border border-[#C89B57]/60 bg-[#050607]/90 px-3 py-1.5 font-mono-tech text-[11px] uppercase tracking-[0.12em] text-[#DDB474] backdrop-blur-sm transition-colors hover:border-[#DDB474]"
-				>
-					{showMobileSecondaryLabels ? '[LABELS −]' : '[LABELS +]'}
-				</button>
-			</div>
-		{/if}
 
 		<!-- =====================================================================
 		     BEAT 1 (a): DISTANCE ALONE (0.00 -> 0.17)
@@ -1375,7 +1355,7 @@
 
 		<!-- =====================================================================
 		     BEAT 2 (b): THE QUOTE ALONE (0.20 -> 0.37)
-		     The closing quote is the SOLE text on screen, centered, nav still hidden.
+		     The shoreline quote is the SOLE text on screen, centered, nav still hidden.
 		     Never sits under or collides with the top bar.
 		     ===================================================================== -->
 		{#if quoteBeatOpacity > 0.002}
@@ -1385,14 +1365,31 @@
 				style={`opacity: ${quoteBeatOpacity.toFixed(4)}; transform: translate3d(0, ${quoteBeatTranslateY.toFixed(2)}px, 0);`}
 			>
 				<p
-					class="max-w-[36ch] text-center font-display font-normal leading-[1.26] tracking-[-0.02em] text-[#E8E6E1]"
+					class="max-w-[36ch] text-center font-display font-normal italic leading-[1.26] tracking-[-0.02em] text-[#E8E6E1]"
 					style="font-size: clamp(1.5rem, 3.2vw, 2.75rem);"
+				>
+					“Fifty years of fire and radio, and we have barely stepped off the shoreline.”
+				</p>
+			</div>
+		{/if}
+
+		<!-- =====================================================================
+		     BEAT 3 (c) CLOSING LINE: AMBER POINT QUOTE WITH THE GALAXY AT THE END
+		     ===================================================================== -->
+		{#if finalAmberQuoteOpacity > 0.002}
+			<div
+				data-testid="finale-galaxy-closing-quote"
+				class="pointer-events-none absolute inset-x-0 bottom-12 sm:bottom-14 flex flex-col items-center justify-end px-6 sm:px-12 text-center"
+				style={`opacity: ${finalAmberQuoteOpacity.toFixed(4)}; transform: translate3d(0, ${finalAmberQuoteTranslateY.toFixed(2)}px, 0);`}
+			>
+				<p
+					class="max-w-[42ch] text-center font-display font-normal leading-[1.28] tracking-[-0.02em] text-[#E8E6E1]"
+					style="font-size: clamp(1.25rem, 2.3vw, 2.1rem); text-shadow: 0 2px 24px rgba(5, 6, 7, 0.96);"
 				>
 					“Four hundred billion suns. Everything we have ever loved is inside that amber point.”
 				</p>
 			</div>
 		{/if}
-
 		<!-- =====================================================================
 		     DISCREET TEXT-ONLY "Chapters ↗" TRIGGER (Appears only after Galaxy settles)
 		     ===================================================================== -->

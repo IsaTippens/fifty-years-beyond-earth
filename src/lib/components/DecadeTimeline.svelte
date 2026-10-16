@@ -726,14 +726,3 @@
 		</div>
 	</div>
 </section>
-
-<style>
-	@media (max-width: 767px) {
-		.decade-plot-svg-wrap :global(svg text[font-size='10']) {
-			font-size: 12.2px;
-		}
-		.decade-plot-svg-wrap :global(svg text[font-size='9.6']) {
-			font-size: 11.5px;
-		}
-	}
-</style>

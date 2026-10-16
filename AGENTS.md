@@ -2,10 +2,9 @@
 
 ## Core Legibility, Typography & Interactive Scene Invariants
 
-1. **Balanced SVG & Telemetry Typography (Desktop Restraint + Mobile 11–12px Floor)**:
-   - Keep mobile (`< 768px`) labels at an effective rendered floor of **~11–12px** (`12px` primary labels, `11px` captions), including `<text>` inside SVGs.
-   - On desktop (`>= 768px`), keep schematic, Oort Cloud, pull-back, and finale marker labels restrained (~20–30% smaller than oversized mobile-floor raw scaling) and build hierarchy with **weight** (`600` vs `400`), **tracking** (`letter-spacing`), and **opacity** (`0.94` vs `0.62`) — not raw size.
-   - Over bright imagery (such as the Milky Way galactic plane), pair labels with a soft dark scrim/halo (`paint-order: stroke fill`, drop-shadow, or translucent `#050607` backing). On mobile (`< 768px`) in the Milky Way finale, display only the primary `YOU ARE HERE · SOL` and `VOYAGER 1 & 2` labels by default; reveal secondary galactic/stellar labels on tap (`[LABELS +]`).
+1. **Balanced SVG & Telemetry Typography**:
+   - Keep schematic, Oort Cloud, pull-back, and finale marker labels restrained across desktop and mobile (~20–30% smaller than oversized raw scaling) and build hierarchy with **weight** (`600` vs `400`), **tracking** (`letter-spacing`), and **opacity** (`0.94` vs `0.62`) — not raw size.
+   - Over bright imagery (such as the Milky Way galactic plane), pair labels with a soft dark scrim/halo (`paint-order: stroke fill`, drop-shadow, or translucent `#050607` backing) and reduced mobile label sizing (no `[LABELS +]` expand button).
 2. **No undismissable overlay may block an interactive scene**:
    - No panel may permanently cover an interactive 3D WebGL scene (`SaturnCassiniScene.svelte`, `ExoplanetOrrery.svelte`).
    - Position any desktop telemetry/caption overlays strictly at the outer margins of the 3D viewport, clear of the visual focal point.

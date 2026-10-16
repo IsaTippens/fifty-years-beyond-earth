@@ -1110,22 +1110,20 @@
 </div>
 
 <style>
-	@media (min-width: 768px) {
-		.schematic-svg-container :global(svg text[font-size='12']) {
-			font-size: 9.2px;
-			font-weight: 600;
-			letter-spacing: 0.07em;
-		}
-		.schematic-svg-container :global(svg text[font-size='11.5']),
-		.schematic-svg-container :global(svg g[font-size='11.5'] text) {
-			font-size: 8.7px;
-			font-weight: 500;
-			letter-spacing: 0.04em;
-		}
-		.schematic-svg-container :global(svg text[font-size='11.2']) {
-			font-size: 8.3px;
-			font-weight: 400;
-			letter-spacing: 0.02em;
-		}
+	.schematic-svg-container :global(svg text[font-size='12']) {
+		font-size: 9.2px;
+		font-weight: 600;
+		letter-spacing: 0.07em;
+	}
+	.schematic-svg-container :global(svg text[font-size='11.5']),
+	.schematic-svg-container :global(svg g[font-size='11.5'] text) {
+		font-size: 8.7px;
+		font-weight: 500;
+		letter-spacing: 0.04em;
+	}
+	.schematic-svg-container :global(svg text[font-size='11.2']) {
+		font-size: 8.3px;
+		font-weight: 400;
+		letter-spacing: 0.02em;
 	}
 </style>

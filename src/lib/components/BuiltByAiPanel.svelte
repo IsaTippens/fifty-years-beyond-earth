@@ -390,16 +390,3 @@
 		</div>
 	</div>
 </section>
-
-<style>
-	@media (max-width: 767px) {
-		.ai-dag-svg-wrap :global(svg text[font-size='9.8']) {
-			font-size: 12px;
-		}
-		.ai-dag-svg-wrap :global(svg text[font-size='9.5']),
-		.ai-dag-svg-wrap :global(svg text[font-size='9.4']),
-		.ai-dag-svg-wrap :global(svg text[font-size='9.2']) {
-			font-size: 11.4px;
-		}
-	}
-</style>
