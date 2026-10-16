@@ -105,7 +105,7 @@
 		<div
 			class="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8E6E1]/12 px-3.5 py-2 sm:px-5"
 		>
-			<div class="flex items-center gap-2.5 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em]">
+			<div class="flex items-center gap-2.5 font-mono-tech text-xs uppercase tracking-[0.16em]">
 				<span class="h-1.5 w-1.5 rounded-full bg-[#C89B57]"></span>
 				{#if currentVideo.kind === 'youtube-embed'}
 					<span class="text-[#C89B57]">WATCH THE MOMENT · SPACEX</span>
@@ -122,7 +122,7 @@
 						<button
 							type="button"
 							onclick={() => selectClip(idx)}
-							class="border px-2.5 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] transition-colors duration-300 cursor-pointer {activeIndex ===
+							class="border px-2.5 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] transition-colors duration-300 cursor-pointer {activeIndex ===
 							idx
 								? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
 								: 'border-[#E8E6E1]/14 bg-transparent text-[#E8E6E1]/60 hover:text-[#E8E6E1]'}"
@@ -132,7 +132,7 @@
 					{/each}
 				</div>
 			{:else}
-				<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#E8E6E1]/50">
+				<span class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/50">
 					{currentVideo.eventDate}
 				</span>
 			{/if}
@@ -170,7 +170,7 @@
 							style="background: linear-gradient(180deg, rgba(5,6,7,0.28) 0%, rgba(5,6,7,0.48) 55%, rgba(5,6,7,0.88) 100%);"
 						></div>
 						<div class="absolute inset-0 flex flex-col justify-between p-4 sm:p-6">
-							<div class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#C89B57]">
+							<div class="font-mono-tech text-xs uppercase tracking-[0.18em] text-[#C89B57]">
 								WATCH THE MOMENT · SPACEX (OPENS YOUTUBE ↗)
 							</div>
 							<div class="flex items-end justify-between gap-4">
@@ -225,7 +225,7 @@
 
 						<!-- Bottom Editorial Overlay: Thin Mono Eyebrow + Serif Title -->
 						<div class="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-6">
-							<div class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#DDB474]">
+							<div class="font-mono-tech text-xs uppercase tracking-[0.18em] text-[#DDB474]">
 								WATCH THE MOMENT · SPACEX
 							</div>
 							<h4
@@ -266,7 +266,7 @@
 						style="background: linear-gradient(180deg, rgba(5,6,7,0) 0%, rgba(5,6,7,0.82) 100%);"
 					>
 						<div>
-							<div class="font-mono-tech text-[10px] uppercase tracking-[0.16em] text-[#DDB474]">
+							<div class="font-mono-tech text-xs uppercase tracking-[0.16em] text-[#DDB474]">
 								AMBIENT ARCHIVAL LOOP · MUTED
 							</div>
 							<h4 class="mt-0.5 font-display text-base sm:text-xl font-normal text-[#F5F3EE] leading-snug">
@@ -277,7 +277,7 @@
 							<button
 								type="button"
 								onclick={toggleAmbientPause}
-								class="border border-[#E8E6E1]/25 bg-[#050607]/85 px-2.5 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#E8E6E1] hover:border-[#C89B57] hover:text-[#C89B57] cursor-pointer"
+								class="border border-[#E8E6E1]/25 bg-[#050607]/85 px-2.5 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] text-[#E8E6E1] hover:border-[#C89B57] hover:text-[#C89B57] cursor-pointer"
 							>
 								{ambientPaused ? 'PLAY' : 'PAUSE'}
 							</button>
@@ -285,7 +285,7 @@
 								<button
 									type="button"
 									onclick={toggleAmbientMute}
-									class="border border-[#C89B57]/60 bg-[#050607]/85 px-2.5 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57] hover:bg-[#C89B57]/20 cursor-pointer"
+									class="border border-[#C89B57]/60 bg-[#050607]/85 px-2.5 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C89B57] hover:bg-[#C89B57]/20 cursor-pointer"
 								>
 									{ambientMuted ? 'UNMUTE AUDIO' : 'MUTE AUDIO'}
 								</button>
@@ -328,7 +328,7 @@
 
 					<!-- Bottom Editorial Overlay -->
 					<div class="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-6">
-						<div class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#DDB474]">
+						<div class="font-mono-tech text-xs uppercase tracking-[0.18em] text-[#DDB474]">
 							{currentVideo.hasAudio ? 'CLICK TO PLAY WITH AUDIO' : 'CLICK TO PLAY ARCHIVAL FOOTAGE'} · {currentVideo.durationLabel}
 						</div>
 						<h4
@@ -344,7 +344,7 @@
 
 		<!-- Bottom Telemetry & Attribution Caption Bar -->
 		<div
-			class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-[#E8E6E1]/12 px-3.5 py-2.5 sm:px-5 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em]"
+			class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-[#E8E6E1]/12 px-3.5 py-2.5 sm:px-5 font-mono-tech text-[11px] uppercase tracking-[0.14em]"
 		>
 			<div class="text-[#E8E6E1]/75 leading-snug">
 				<span class="text-[#C89B57]">{currentVideo.missionName}</span>

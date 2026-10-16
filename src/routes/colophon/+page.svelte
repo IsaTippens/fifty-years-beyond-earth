@@ -94,7 +94,7 @@
 				href="#sources"
 				class="group border border-[#E8E6E1]/12 bg-[#08090B] hover:border-[#C89B57] p-4 transition-colors duration-300"
 			>
-				<div class="font-mono-tech text-[10px] uppercase tracking-[0.16em] text-[#C89B57]">
+				<div class="font-mono-tech text-xs uppercase tracking-[0.16em] text-[#C89B57]">
 					SECTION 01 // VERIFICATION
 				</div>
 				<div class="mt-1 font-display text-xl text-[#E8E6E1] group-hover:text-[#DDB474] transition-colors">
@@ -109,7 +109,7 @@
 				href="#assets"
 				class="group border border-[#E8E6E1]/12 bg-[#08090B] hover:border-[#C89B57] p-4 transition-colors duration-300"
 			>
-				<div class="font-mono-tech text-[10px] uppercase tracking-[0.16em] text-[#C89B57]">
+				<div class="font-mono-tech text-xs uppercase tracking-[0.16em] text-[#C89B57]">
 					SECTION 02 // PROVENANCE
 				</div>
 				<div class="mt-1 font-display text-xl text-[#E8E6E1] group-hover:text-[#DDB474] transition-colors">
@@ -124,7 +124,7 @@
 				href="#ai-architecture"
 				class="group border border-[#E8E6E1]/12 bg-[#08090B] hover:border-[#C89B57] p-4 transition-colors duration-300"
 			>
-				<div class="font-mono-tech text-[10px] uppercase tracking-[0.16em] text-[#C89B57]">
+				<div class="font-mono-tech text-xs uppercase tracking-[0.16em] text-[#C89B57]">
 					SECTION 03 // ENGINEERING
 				</div>
 				<div class="mt-1 font-display text-xl text-[#E8E6E1] group-hover:text-[#DDB474] transition-colors">

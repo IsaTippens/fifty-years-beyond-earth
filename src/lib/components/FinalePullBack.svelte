@@ -141,6 +141,18 @@
 	let sectionEl: HTMLElement | undefined = $state();
 	let targetP = $state(0);
 	let smoothP = $state(0);
+	let viewportW = $state(typeof window !== 'undefined' ? window.innerWidth : 1440);
+	let viewportH = $state(typeof window !== 'undefined' ? window.innerHeight : 900);
+	let showMobileSecondaryLabels = $state(false);
+
+	const isMobile = $derived(viewportW < 768);
+	const showSecondaryLabels = $derived(!isMobile || showMobileSecondaryLabels);
+	const stageSquarePx = $derived(Math.max(320, Math.min(viewportW, viewportH)));
+	const svgUnitPerPx = $derived(1000 / stageSquarePx);
+
+	function svgPx(targetCssPx: number): number {
+		return Number((targetCssPx * svgUnitPerPx).toFixed(2));
+	}
 
 	function clamp01(v: number): number {
 		return Math.max(0, Math.min(1, v));
@@ -252,6 +264,8 @@
 
 	function computeTargetProgress() {
 		if (!sectionEl || typeof window === 'undefined') return;
+		viewportW = window.innerWidth;
+		viewportH = window.innerHeight;
 		const rect = sectionEl.getBoundingClientRect();
 		const scrollable = Math.max(1, rect.height - window.innerHeight);
 		targetP = clamp01(-rect.top / scrollable);
@@ -366,8 +380,13 @@
 					<stop offset="76%" stop-color="#E8E6E1" stop-opacity="0.055" />
 					<stop offset="100%" stop-color="#E8E6E1" stop-opacity="0" />
 				</linearGradient>
-			</defs>
 
+				<!-- Soft Dark Documentary Scrim / Drop-Shadow Filter for Bright Galactic Band -->
+				<filter id="finale-label-shadow" x="-30%" y="-40%" width="160%" height="180%">
+					<feDropShadow dx="0" dy="1" stdDeviation="4" flood-color="#050607" flood-opacity="0.96" />
+					<feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#050607" flood-opacity="0.92" />
+				</filter>
+			</defs>
 			<!-- Subtle Astrometric Crosshair Reference Axes centered on Sol -->
 			<g opacity={Math.max(0, 0.22 * (1 - beat5Opacity))}>
 				<line
@@ -433,15 +452,18 @@
 							stroke-dasharray="2 8"
 						/>
 
-						{#if rOrionArmScale > 45 && rOrionArmScale < 520}
+						{#if showSecondaryLabels && rOrionArmScale > 45 && rOrionArmScale < 520}
 							<text
-								x={rOrionArmScale * 0.52}
-								y={rOrionArmScale * 0.28 - 10}
-								fill="#C89B57"
-								fill-opacity="0.78"
+								x={isMobile ? 0 : rOrionArmScale * 0.35}
+								y={rOrionArmScale * 0.24 - svgPx(10)}
+								text-anchor={isMobile ? 'middle' : 'start'}
+								fill="#DDB474"
+								fill-opacity="0.92"
 								font-family="JetBrains Mono, monospace"
-								font-size="9.5"
-								letter-spacing="2.2"
+								font-size={svgPx(12.5)}
+								letter-spacing={svgPx(1.5)}
+								class="finale-svg-label"
+								filter="url(#finale-label-shadow)"
 							>
 								ORION–CYGNUS SPIRAL ARM · 3,500 LY WIDTH
 							</text>
@@ -460,16 +482,18 @@
 							stroke-width="0.8"
 							stroke-dasharray="3 6"
 						/>
-						{#if rLocalBubble > 36 && rLocalBubble < 410}
+						{#if showSecondaryLabels && rLocalBubble > 42 && rLocalBubble < 410}
 							<text
 								x={solX}
-								y={solY + rLocalBubble + 14}
+								y={solY + rLocalBubble + svgPx(16)}
 								text-anchor="middle"
 								fill="#E8E6E1"
-								fill-opacity="0.48"
+								fill-opacity="0.78"
 								font-family="JetBrains Mono, monospace"
-								font-size="8.5"
-								letter-spacing="1.8"
+								font-size={svgPx(11.5)}
+								letter-spacing={svgPx(1.4)}
+								class="finale-svg-label"
+								filter="url(#finale-label-shadow)"
 							>
 								LOCAL INTERSTELLAR BUBBLE · ~300 LY
 							</text>
@@ -515,40 +539,46 @@
 									stroke-opacity="0.4"
 									stroke-width="0.8"
 								/>
-								<!-- Leader tick + Telemetry Callout -->
-								<line
-									x1={pt.x + (labelRight ? 8 : -8)}
-									y1={pt.y}
-									x2={pt.x + (labelRight ? 24 : -24)}
-									y2={pt.y}
-									stroke={star.color}
-									stroke-opacity="0.55"
-									stroke-width="0.8"
-								/>
-								<text
-									x={pt.x + (labelRight ? 29 : -29)}
-									y={pt.y - 3}
-									text-anchor={labelRight ? 'start' : 'end'}
-									fill="#E8E6E1"
-									fill-opacity="0.9"
-									font-family="JetBrains Mono, monospace"
-									font-size="9.5"
-									letter-spacing="1.6"
-								>
-									{star.name} · <tspan fill="#C89B57">{star.distanceLy.toLocaleString('en-US')} LY</tspan>
-								</text>
-								<text
-									x={pt.x + (labelRight ? 29 : -29)}
-									y={pt.y + 9}
-									text-anchor={labelRight ? 'start' : 'end'}
-									fill="#E8E6E1"
-									fill-opacity="0.48"
-									font-family="JetBrains Mono, monospace"
-									font-size="8"
-									letter-spacing="1.5"
-								>
-									{star.spectral} // {star.note}
-								</text>
+								<!-- Leader tick + Telemetry Callout (Desktop default; Mobile on tap) -->
+								{#if showSecondaryLabels}
+									<line
+										x1={pt.x + (labelRight ? 8 : -8)}
+										y1={pt.y}
+										x2={pt.x + (labelRight ? 24 : -24)}
+										y2={pt.y}
+										stroke={star.color}
+										stroke-opacity="0.65"
+										stroke-width="1"
+									/>
+									<text
+										x={isMobile ? Math.min(680, Math.max(320, pt.x)) : pt.x + (labelRight ? 28 : -28)}
+										y={pt.y - svgPx(4)}
+										text-anchor={isMobile ? 'middle' : labelRight ? 'start' : 'end'}
+										fill="#F2F0EC"
+										fill-opacity="0.96"
+										font-family="JetBrains Mono, monospace"
+										font-size={svgPx(12.5)}
+										letter-spacing={svgPx(1.2)}
+										class="finale-svg-label"
+										filter="url(#finale-label-shadow)"
+									>
+										{star.name} · <tspan fill="#DDB474">{star.distanceLy.toLocaleString('en-US')} LY</tspan>
+									</text>
+									<text
+										x={isMobile ? Math.min(680, Math.max(320, pt.x)) : pt.x + (labelRight ? 28 : -28)}
+										y={pt.y + svgPx(12)}
+										text-anchor={isMobile ? 'middle' : labelRight ? 'start' : 'end'}
+										fill="#E8E6E1"
+										fill-opacity="0.78"
+										font-family="JetBrains Mono, monospace"
+										font-size={svgPx(11.5)}
+										letter-spacing={svgPx(1.0)}
+										class="finale-svg-label"
+										filter="url(#finale-label-shadow)"
+									>
+										{isMobile ? star.spectral : `${star.spectral} // ${star.note}`}
+									</text>
+								{/if}
 							</g>
 						{/if}
 					{/each}
@@ -624,56 +654,62 @@
 					{/each}
 
 					<!-- Oort Shell Callout Labels -->
-					{#each OORT_SHELLS as oort (oort.id)}
-						{@const rShell = auToRadiusPx(oort.outerAu, cameraOuterAu)}
-						{#if rShell > 28 && rShell < 450}
-							{@const pt = polarToCartesian(solX, solY, rShell, oort.angleDeg)}
-							{@const labelVis = bellWindow(28, 52, 370, 450, rShell)}
-							<g opacity={labelVis}>
-								<circle cx={pt.x} cy={pt.y} r="2.2" fill="#C89B57" />
-								<line
-									x1={pt.x}
-									y1={pt.y}
-									x2={pt.x + 22}
-									y2={pt.y - 16}
-									stroke="#C89B57"
-									stroke-opacity="0.6"
-									stroke-width="0.8"
-								/>
-								<line
-									x1={pt.x + 22}
-									y1={pt.y - 16}
-									x2={pt.x + 68}
-									y2={pt.y - 16}
-									stroke="#C89B57"
-									stroke-opacity="0.6"
-									stroke-width="0.8"
-								/>
-								<text
-									x={pt.x + 74}
-									y={pt.y - 19}
-									fill="#E8E6E1"
-									fill-opacity="0.9"
-									font-family="JetBrains Mono, monospace"
-									font-size="9.5"
-									letter-spacing="1.6"
-								>
-									{oort.label}
-								</text>
-								<text
-									x={pt.x + 74}
-									y={pt.y - 7}
-									fill="#C89B57"
-									fill-opacity="0.85"
-									font-family="JetBrains Mono, monospace"
-									font-size="8.5"
-									letter-spacing="1.5"
-								>
-									{oort.distanceText}
-								</text>
-							</g>
-						{/if}
-					{/each}
+					{#if showSecondaryLabels}
+						{#each OORT_SHELLS as oort (oort.id)}
+							{@const rShell = auToRadiusPx(oort.outerAu, cameraOuterAu)}
+							{#if rShell > 28 && rShell < 450}
+								{@const pt = polarToCartesian(solX, solY, rShell, oort.angleDeg)}
+								{@const labelVis = bellWindow(28, 52, 370, 450, rShell)}
+								<g opacity={labelVis}>
+									<circle cx={pt.x} cy={pt.y} r="2.6" fill="#C89B57" />
+									<line
+										x1={pt.x}
+										y1={pt.y}
+										x2={pt.x + 22}
+										y2={pt.y - 16}
+										stroke="#C89B57"
+										stroke-opacity="0.7"
+										stroke-width="1"
+									/>
+									<line
+										x1={pt.x + 22}
+										y1={pt.y - 16}
+										x2={pt.x + 62}
+										y2={pt.y - 16}
+										stroke="#C89B57"
+										stroke-opacity="0.7"
+										stroke-width="1"
+									/>
+									<text
+										x={pt.x + 68}
+										y={pt.y - svgPx(15)}
+										fill="#F2F0EC"
+										fill-opacity="0.96"
+										font-family="JetBrains Mono, monospace"
+										font-size={svgPx(12.5)}
+										letter-spacing={svgPx(1.2)}
+										class="finale-svg-label"
+										filter="url(#finale-label-shadow)"
+									>
+										{oort.label}
+									</text>
+									<text
+										x={pt.x + 68}
+										y={pt.y - svgPx(1)}
+										fill="#DDB474"
+										fill-opacity="0.92"
+										font-family="JetBrains Mono, monospace"
+										font-size={svgPx(11.5)}
+										letter-spacing={svgPx(1.1)}
+										class="finale-svg-label"
+										filter="url(#finale-label-shadow)"
+									>
+										{oort.distanceText}
+									</text>
+								</g>
+							{/if}
+						{/each}
+					{/if}
 				</g>
 			{/if}
 
@@ -709,17 +745,19 @@
 								stroke-opacity={orbit.showLabel ? 0.22 : 0.11}
 								stroke-width="0.75"
 							/>
-							{#if orbit.showLabel && orbit.angleDeg !== undefined && rOrbit > 36 && rOrbit < 390}
+							{#if showSecondaryLabels && orbit.showLabel && orbit.angleDeg !== undefined && rOrbit > 36 && rOrbit < 390}
 								{@const pt = polarToCartesian(solX, solY, rOrbit, orbit.angleDeg)}
-								<circle cx={pt.x} cy={pt.y} r="1.8" fill="#E8E6E1" fill-opacity="0.7" />
+								<circle cx={pt.x} cy={pt.y} r="2.2" fill="#E8E6E1" fill-opacity="0.8" />
 								<text
-									x={pt.x + 7}
-									y={pt.y + 3}
+									x={pt.x + 8}
+									y={pt.y + 4}
 									fill="#E8E6E1"
-									fill-opacity="0.52"
+									fill-opacity="0.78"
 									font-family="JetBrains Mono, monospace"
-									font-size="8"
-									letter-spacing="1.5"
+									font-size={svgPx(11.5)}
+									letter-spacing={svgPx(1.1)}
+									class="finale-svg-label"
+									filter="url(#finale-label-shadow)"
 								>
 									{orbit.name}
 								</text>
@@ -753,17 +791,19 @@
 							stroke-width="0.9"
 							stroke-dasharray="4 4"
 						/>
-						{#if rTermination > 58 && rTermination < 380}
+						{#if showSecondaryLabels && rTermination > 58 && rTermination < 380}
 							{@const ptTerm = polarToCartesian(solX, solY, rTermination, -128)}
 							<text
-								x={ptTerm.x - 8}
+								x={ptTerm.x - 10}
 								y={ptTerm.y - 6}
 								text-anchor="end"
 								fill="#E8E6E1"
-								fill-opacity="0.62"
+								fill-opacity="0.78"
 								font-family="JetBrains Mono, monospace"
-								font-size="8.5"
-								letter-spacing="1.6"
+								font-size={svgPx(11.5)}
+								letter-spacing={svgPx(1.2)}
+								class="finale-svg-label"
+								filter="url(#finale-label-shadow)"
 							>
 								TERMINATION SHOCK · 94 AU
 							</text>
@@ -783,49 +823,60 @@
 						/>
 						{#if rHeliopause > 48 && rHeliopause < 410}
 							{@const ptHelio = polarToCartesian(solX, solY, rHeliopause, -68)}
-							<circle cx={ptHelio.x} cy={ptHelio.y} r="2.3" fill="#C89B57" />
+							<circle cx={ptHelio.x} cy={ptHelio.y} r="2.6" fill="#C89B57" />
 							<line
 								x1={ptHelio.x}
 								y1={ptHelio.y}
 								x2={ptHelio.x + 20}
 								y2={ptHelio.y - 18}
 								stroke="#C89B57"
-								stroke-opacity="0.7"
-								stroke-width="0.85"
+								stroke-opacity="0.8"
+								stroke-width="1"
 							/>
 							<text
-								x={ptHelio.x + 26}
-								y={ptHelio.y - 21}
-								fill="#C89B57"
+								x={isMobile ? solX : ptHelio.x + 26}
+								y={ptHelio.y - svgPx(16)}
+								text-anchor={isMobile ? 'middle' : 'start'}
+								fill="#DDB474"
 								font-family="JetBrains Mono, monospace"
-								font-size="9.5"
-								letter-spacing="1.8"
+								font-size={svgPx(12.5)}
+								letter-spacing={svgPx(1.4)}
+								class="finale-svg-label"
+								filter="url(#finale-label-shadow)"
 							>
 								HELIOPAUSE · 121.6 AU
 							</text>
-							<text
-								x={ptHelio.x + 26}
-								y={ptHelio.y - 9}
-								fill="#E8E6E1"
-								fill-opacity="0.55"
-								font-family="JetBrains Mono, monospace"
-								font-size="8"
-								letter-spacing="1.4"
-							>
-								SOLAR WIND TERMINUS
-							</text>
+							{#if showSecondaryLabels}
+								<text
+									x={isMobile ? solX : ptHelio.x + 26}
+									y={ptHelio.y - svgPx(2)}
+									text-anchor={isMobile ? 'middle' : 'start'}
+									fill="#E8E6E1"
+									fill-opacity="0.76"
+									font-family="JetBrains Mono, monospace"
+									font-size={svgPx(11.5)}
+									letter-spacing={svgPx(1.1)}
+									class="finale-svg-label"
+									filter="url(#finale-label-shadow)"
+								>
+									SOLAR WIND TERMINUS
+								</text>
+							{/if}
 						{:else if rHeliopause >= 3 && rHeliopause <= 48 && beat3Opacity > 0.15}
-							<!-- Pinpoint Heliosphere label during Oort Cloud pull-back -->
+							<!-- Pinpoint Heliosphere label during Oort Cloud pull-back (centered below heliopause so it never collides with Voyager 1/2) -->
 							<text
-								x={solX + rHeliopause + 10}
-								y={solY + 3}
-								fill="#C89B57"
-								fill-opacity="0.88"
+								x={solX}
+								y={solY + rHeliopause + svgPx(28)}
+								text-anchor="middle"
+								fill="#DDB474"
+								fill-opacity="0.95"
 								font-family="JetBrains Mono, monospace"
-								font-size="8.5"
-								letter-spacing="1.6"
+								font-size={svgPx(12.5)}
+								letter-spacing={svgPx(1.3)}
+								class="finale-svg-label"
+								filter="url(#finale-label-shadow)"
 							>
-								HELIOSPHERE PINPOINT · 121.6 AU
+								SOL &amp; HELIOSPHERE · 121.6 AU
 							</text>
 						{/if}
 					{/if}
@@ -871,28 +922,34 @@
 									stroke-width="0.9"
 								/>
 								<text
-									x={pt.x + (isRight ? 40 : -40)}
-									y={pt.y - 3}
-									text-anchor={isRight ? 'start' : 'end'}
-									fill="#E8E6E1"
+									x={isMobile ? solX : pt.x + (isRight ? 38 : -38)}
+									y={pt.y - svgPx(3)}
+									text-anchor={isMobile ? 'middle' : isRight ? 'start' : 'end'}
+									fill="#F2F0EC"
 									font-family="JetBrains Mono, monospace"
-									font-size="10"
-									letter-spacing="1.7"
+									font-size={svgPx(12.5)}
+									letter-spacing={svgPx(1.3)}
+									class="finale-svg-label"
+									filter="url(#finale-label-shadow)"
 								>
-									{probe.name} · <tspan fill="#C89B57">{probe.distanceLabel}</tspan>
+									{probe.name} · <tspan fill="#DDB474">{probe.distanceLabel}</tspan>
 								</text>
-								<text
-									x={pt.x + (isRight ? 40 : -40)}
-									y={pt.y + 9}
-									text-anchor={isRight ? 'start' : 'end'}
-									fill="#E8E6E1"
-									fill-opacity="0.54"
-									font-family="JetBrains Mono, monospace"
-									font-size="8"
-									letter-spacing="1.4"
-								>
-									{probe.velocityLabel}
-								</text>
+								{#if showSecondaryLabels}
+									<text
+										x={isMobile ? solX : pt.x + (isRight ? 38 : -38)}
+										y={pt.y + svgPx(12)}
+										text-anchor={isMobile ? 'middle' : isRight ? 'start' : 'end'}
+										fill="#E8E6E1"
+										fill-opacity="0.76"
+										font-family="JetBrains Mono, monospace"
+										font-size={svgPx(11.5)}
+										letter-spacing={svgPx(1.1)}
+										class="finale-svg-label"
+										filter="url(#finale-label-shadow)"
+									>
+										{probe.velocityLabel}
+									</text>
+								{/if}
 							</g>
 						{/if}
 					{/each}
@@ -938,129 +995,258 @@
 						stroke-width="0.75"
 						stroke-dasharray="2 5"
 					/>
-					<circle cx="500" cy="500" r="2" fill="#E8E6E1" fill-opacity="0.45" />
-					<text
-						x="484"
-						y="488"
-						text-anchor="end"
-						fill="#E8E6E1"
-						fill-opacity="0.48"
-						font-family="JetBrains Mono, monospace"
-						font-size="8.5"
-						letter-spacing="1.6"
-					>
-						GALACTIC CORE · SGR A*
-					</text>
+					<circle cx="500" cy="500" r="2.8" fill="#E8E6E1" fill-opacity="0.7" />
+					{#if showSecondaryLabels}
+						<text
+							x={isMobile ? 500 : 482}
+							y={isMobile ? solY - svgPx(94) : 486}
+							text-anchor={isMobile ? 'middle' : 'end'}
+							fill="#F2F0EC"
+							fill-opacity="0.92"
+							font-family="JetBrains Mono, monospace"
+							font-size={svgPx(12.5)}
+							letter-spacing={svgPx(1.4)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							GALACTIC CORE · SGR A*
+						</text>
+					{/if}
 
 					<!-- Target Reticle around Sol in the Orion Arm -->
 					<circle
 						cx={solX}
 						cy={solY}
-						r="15"
+						r="16"
 						fill="none"
 						stroke="#C89B57"
-						stroke-opacity="0.38"
-						stroke-width="0.75"
+						stroke-opacity="0.5"
+						stroke-width="1"
 					/>
 					<line
-						x1={solX - 21}
+						x1={solX - 22}
 						y1={solY}
 						x2={solX - 11}
 						y2={solY}
 						stroke="#C89B57"
-						stroke-opacity="0.7"
-						stroke-width="0.85"
+						stroke-opacity="0.8"
+						stroke-width="1"
 					/>
 					<line
 						x1={solX + 11}
 						y1={solY}
-						x2={solX + 21}
+						x2={solX + 22}
 						y2={solY}
 						stroke="#C89B57"
-						stroke-opacity="0.7"
-						stroke-width="0.85"
+						stroke-opacity="0.8"
+						stroke-width="1"
 					/>
 					<line
 						x1={solX}
-						y1={solY - 21}
+						y1={solY - 22}
 						x2={solX}
 						y2={solY - 11}
 						stroke="#C89B57"
-						stroke-opacity="0.7"
-						stroke-width="0.85"
+						stroke-opacity="0.8"
+						stroke-width="1"
 					/>
 					<line
 						x1={solX}
 						y1={solY + 11}
 						x2={solX}
-						y2={solY + 21}
+						y2={solY + 22}
 						stroke="#C89B57"
-						stroke-opacity="0.7"
-						stroke-width="0.85"
-					/>
-
-					<!-- 1px Amber Hairline #1 -> YOU ARE HERE · SOL (Upward-Right) -->
-					<polyline
-						points={`${solX},${solY - 3} ${solX + 34},${solY - 54} ${solX + 240},${solY - 54}`}
-						fill="none"
-						stroke="#C89B57"
-						stroke-opacity="0.88"
+						stroke-opacity="0.8"
 						stroke-width="1"
 					/>
-					<text
-						x={solX + 38}
-						y={solY - 64}
-						fill="#C89B57"
-						font-family="JetBrains Mono, monospace"
-						font-size="11"
-						font-weight="500"
-						letter-spacing="2.1"
-					>
-						YOU ARE HERE · SOL
-					</text>
-					<text
-						x={solX + 38}
-						y={solY - 40}
-						fill="#E8E6E1"
-						fill-opacity="0.62"
-						font-family="JetBrains Mono, monospace"
-						font-size="8.2"
-						letter-spacing="1.5"
-					>
-						ORION–CYGNUS ARM · 26,000 LY FROM CORE
-					</text>
 
-					<!-- Second Micro-Tick just 2px beside Sol -> VOYAGER 1 & 2 · 0.0027 LIGHT-YEARS OUT -->
-					<circle cx={voyagerTickX} cy={voyagerTickY} r="1.25" fill="#DDB474" />
-					<polyline
-						points={`${voyagerTickX + 1.5},${voyagerTickY} ${solX + 34},${solY + 42} ${solX + 240},${solY + 42}`}
-						fill="none"
-						stroke="#C89B57"
-						stroke-opacity="0.72"
-						stroke-width="0.9"
-					/>
-					<text
-						x={solX + 38}
-						y={solY + 33}
-						fill="#E8E6E1"
-						fill-opacity="0.92"
-						font-family="JetBrains Mono, monospace"
-						font-size="9.5"
-						letter-spacing="1.6"
-					>
-						VOYAGER 1 &amp; 2 · <tspan fill="#C89B57">0.0027 LY OUT</tspan>
-					</text>
-					<text
-						x={solX + 38}
-						y={solY + 54}
-						fill="#E8E6E1"
-						fill-opacity="0.54"
-						font-family="JetBrains Mono, monospace"
-						font-size="8"
-						letter-spacing="1.4"
-					>
-						169.8 &amp; 142.1 AU · A HAIR’S BREADTH OUTSIDE SOL
-					</text>
+					<!-- 1px Amber Hairline #1 -> YOU ARE HERE · SOL -->
+					{#if isMobile}
+						<polyline
+							points={`${solX},${solY - 12} ${solX},${solY - svgPx(28)} 500,${solY - svgPx(28)}`}
+							fill="none"
+							stroke="#C89B57"
+							stroke-opacity="0.92"
+							stroke-width="1.4"
+						/>
+						<rect
+							x={500 - svgPx(115)}
+							y={solY - svgPx(showSecondaryLabels ? 74 : 58)}
+							width={svgPx(230)}
+							height={showSecondaryLabels ? svgPx(44) : svgPx(28)}
+							rx="4"
+							fill="#050607"
+							fill-opacity="0.84"
+						/>
+						<text
+							x="500"
+							y={solY - svgPx(showSecondaryLabels ? 54 : 39)}
+							text-anchor="middle"
+							fill="#DDB474"
+							font-family="JetBrains Mono, monospace"
+							font-size={svgPx(13.5)}
+							font-weight="600"
+							letter-spacing={svgPx(1.5)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							YOU ARE HERE · SOL
+						</text>
+						{#if showSecondaryLabels}
+							<text
+								x="500"
+								y={solY - svgPx(36)}
+								text-anchor="middle"
+								fill="#F2F0EC"
+								fill-opacity="0.88"
+								font-family="JetBrains Mono, monospace"
+								font-size={svgPx(11.5)}
+								letter-spacing={svgPx(1.1)}
+								class="finale-svg-label"
+								filter="url(#finale-label-shadow)"
+							>
+								ORION ARM · 26,000 LY
+							</text>
+						{/if}
+
+						<!-- Second Micro-Tick beside Sol -> VOYAGER 1 & 2 · 0.0027 LY OUT -->
+						<circle cx={voyagerTickX} cy={voyagerTickY} r="2" fill="#DDB474" />
+						<polyline
+							points={`${voyagerTickX},${voyagerTickY + 8} ${solX},${solY + svgPx(28)} 500,${solY + svgPx(28)}`}
+							fill="none"
+							stroke="#C89B57"
+							stroke-opacity="0.88"
+							stroke-width="1.3"
+						/>
+						<rect
+							x={500 - svgPx(150)}
+							y={solY + svgPx(30)}
+							width={svgPx(300)}
+							height={showSecondaryLabels ? svgPx(44) : svgPx(28)}
+							rx="4"
+							fill="#050607"
+							fill-opacity="0.84"
+						/>
+						<text
+							x="500"
+							y={solY + svgPx(49)}
+							text-anchor="middle"
+							fill="#F2F0EC"
+							font-family="JetBrains Mono, monospace"
+							font-size={svgPx(12.5)}
+							font-weight="500"
+							letter-spacing={svgPx(1.1)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							VOYAGER 1 &amp; 2 · <tspan fill="#DDB474">0.0027 LY OUT</tspan>
+						</text>
+						{#if showSecondaryLabels}
+							<text
+								x="500"
+								y={solY + svgPx(67)}
+								text-anchor="middle"
+								fill="#E8E6E1"
+								fill-opacity="0.84"
+								font-family="JetBrains Mono, monospace"
+								font-size={svgPx(11.5)}
+								letter-spacing={svgPx(1.0)}
+								class="finale-svg-label"
+								filter="url(#finale-label-shadow)"
+							>
+								169.8 &amp; 142.1 AU OUTSIDE SOL
+							</text>
+						{/if}
+					{:else}
+						<polyline
+							points={`${solX},${solY - 3} ${solX + 34},${solY - 58} ${solX + 290},${solY - 58}`}
+							fill="none"
+							stroke="#C89B57"
+							stroke-opacity="0.9"
+							stroke-width="1.15"
+						/>
+						<rect
+							x={solX + 32}
+							y={solY - 58 - svgPx(26)}
+							width={svgPx(290)}
+							height={svgPx(46)}
+							rx="3"
+							fill="#050607"
+							fill-opacity="0.76"
+						/>
+						<text
+							x={solX + 40}
+							y={solY - 58 - svgPx(7)}
+							fill="#DDB474"
+							font-family="JetBrains Mono, monospace"
+							font-size={svgPx(14.5)}
+							font-weight="600"
+							letter-spacing={svgPx(1.8)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							YOU ARE HERE · SOL
+						</text>
+						<text
+							x={solX + 40}
+							y={solY - 58 + svgPx(13)}
+							fill="#F2F0EC"
+							fill-opacity="0.88"
+							font-family="JetBrains Mono, monospace"
+							font-size={svgPx(11.5)}
+							letter-spacing={svgPx(1.3)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							ORION–CYGNUS ARM · 26,000 LY FROM CORE
+						</text>
+
+						<!-- Second Micro-Tick just 2px beside Sol -> VOYAGER 1 & 2 · 0.0027 LIGHT-YEARS OUT -->
+						<circle cx={voyagerTickX} cy={voyagerTickY} r="1.6" fill="#DDB474" />
+						<polyline
+							points={`${voyagerTickX + 1.5},${voyagerTickY} ${solX + 34},${solY + 46} ${solX + 290},${solY + 46}`}
+							fill="none"
+							stroke="#C89B57"
+							stroke-opacity="0.8"
+							stroke-width="1.05"
+						/>
+						<rect
+							x={solX + 32}
+							y={solY + 46 - svgPx(24)}
+							width={svgPx(315)}
+							height={svgPx(46)}
+							rx="3"
+							fill="#050607"
+							fill-opacity="0.76"
+						/>
+						<text
+							x={solX + 40}
+							y={solY + 46 - svgPx(6)}
+							fill="#F2F0EC"
+							fill-opacity="0.96"
+							font-family="JetBrains Mono, monospace"
+							font-size={svgPx(13.5)}
+							font-weight="500"
+							letter-spacing={svgPx(1.5)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							VOYAGER 1 &amp; 2 · <tspan fill="#DDB474">0.0027 LY OUT</tspan>
+						</text>
+						<text
+							x={solX + 40}
+							y={solY + 46 + svgPx(13)}
+							fill="#E8E6E1"
+							fill-opacity="0.82"
+							font-family="JetBrains Mono, monospace"
+							font-size={svgPx(11.5)}
+							letter-spacing={svgPx(1.2)}
+							class="finale-svg-label"
+							filter="url(#finale-label-shadow)"
+						>
+							169.8 &amp; 142.1 AU · A HAIR’S BREADTH OUTSIDE SOL
+						</text>
+					{/if}
 				</g>
 			{/if}
 		</svg>
@@ -1076,29 +1262,46 @@
 			style={`opacity: ${scaleReadoutOpacity.toFixed(4)};`}
 		>
 			<div class="space-y-1 font-mono-tech uppercase">
-				<div class="flex items-center gap-2.5 text-[11px] tracking-[0.16em] text-[#C89B57]">
+				<div class="flex items-center gap-2.5 text-xs tracking-[0.16em] text-[#C89B57]">
 					<span class="h-1.5 w-1.5 rounded-full bg-[#C89B57]"></span>
 					<span>{currentScaleDescriptor.phase}</span>
 				</div>
-				<div class="text-xs sm:text-sm tracking-[0.14em] text-[#E8E6E1]/88">
+				<div class="text-xs sm:text-sm tracking-[0.14em] text-[#E8E6E1]/92">
 					{currentScaleDescriptor.scale}
 				</div>
-				<div class="text-[10px] tracking-[0.16em] text-[#E8E6E1]/50">
+				<div class="text-[11px] sm:text-xs tracking-[0.14em] text-[#E8E6E1]/68">
 					{currentScaleDescriptor.detail}
 				</div>
 			</div>
 
 			<div class="text-right font-mono-tech uppercase">
-				<div class="text-[10px] tracking-[0.16em] text-[#E8E6E1]/48">
+				<div class="text-[11px] tracking-[0.14em] text-[#E8E6E1]/62">
 					LOGARITHMIC SCALE FACTOR
 				</div>
 				<div class="mt-0.5 text-xs tracking-[0.14em] text-[#C89B57]">
-					10<sup class="text-[9px]">−{(smoothP * 9).toFixed(2)}</sup>× · FIELD {(cameraOuterAu >= AU_PER_LY
+					10<sup class="text-[11px]">−{(smoothP * 9).toFixed(2)}</sup>× · FIELD {(cameraOuterAu >= AU_PER_LY
 						? `${(cameraOuterAu / AU_PER_LY).toFixed(cameraOuterAu / AU_PER_LY >= 100 ? 0 : 1)} LY`
 						: `${Math.round(cameraOuterAu).toLocaleString('en-US')} AU`)}
 				</div>
 			</div>
 		</div>
+
+		<!-- Mobile Tap-to-Reveal Secondary Labels Toggle (Active during Beats 2–5 on Mobile) -->
+		{#if isMobile && diagramOpacity > 0.1}
+			<div
+				class="pointer-events-auto absolute bottom-38 left-1/2 -translate-x-1/2 z-30"
+				style={`opacity: ${diagramOpacity.toFixed(3)};`}
+			>
+				<button
+					type="button"
+					data-testid="finale-mobile-secondary-toggle"
+					onclick={() => (showMobileSecondaryLabels = !showMobileSecondaryLabels)}
+					class="cursor-pointer border border-[#C89B57]/60 bg-[#050607]/90 px-3 py-1.5 font-mono-tech text-xs uppercase tracking-[0.12em] text-[#DDB474] backdrop-blur-sm transition-colors hover:border-[#DDB474]"
+				>
+					{showMobileSecondaryLabels ? '[LABELS −]' : '[LABELS +]'}
+				</button>
+			</div>
+		{/if}
 
 		<!-- =====================================================================
 		     LAYER 4: BEAT 1 (0.00 - 0.18) — NEAR-BLACK OPENING COPY
@@ -1107,12 +1310,11 @@
 			class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 sm:px-12"
 			style={`opacity: ${beat1Opacity.toFixed(4)}; transform: translate3d(0, ${beat1TranslateY.toFixed(2)}px, 0);`}
 		>
-			<div class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#C89B57]/85 text-center">
+			<div class="font-mono-tech text-xs uppercase tracking-[0.18em] text-[#C89B57]/90 text-center">
 				FINAL HORIZON · 340 AU TO 100,000 LIGHT-YEARS · LOGARITHMIC PULL-BACK
 			</div>
 			<p
 				class="max-w-[36ch] text-center font-display font-normal italic leading-[1.24] tracking-[-0.02em] text-[#E8E6E1]"
-				style="font-size: clamp(1.5rem, 3vw, 2.5rem);"
 			>
 				“Fifty years of fire and radio, and we have barely stepped off the shoreline.”
 			</p>
@@ -1141,6 +1343,13 @@
 <style>
 	.finale-gaia-grade {
 		filter: saturate(0.90) contrast(1.15) brightness(0.86);
+	}
+
+	.finale-svg-label {
+		paint-order: stroke fill;
+		stroke: rgba(5, 6, 7, 0.92);
+		stroke-width: 4px;
+		stroke-linejoin: round;
 	}
 
 	.finale-film-grain {

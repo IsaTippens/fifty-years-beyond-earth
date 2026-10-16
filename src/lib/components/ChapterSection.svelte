@@ -294,7 +294,7 @@
 
 		{#if chapterArt}
 			<div
-				class="pointer-events-none mt-4 md:mt-0 md:absolute md:bottom-6 md:right-10 lg:right-16 z-10 max-w-[90vw] text-right font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/78"
+				class="pointer-events-none mt-4 md:mt-0 md:absolute md:bottom-6 md:right-10 lg:right-16 z-10 max-w-[90vw] text-right font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/78"
 				style="text-shadow: 0 1px 14px rgba(5, 6, 7, 0.98);"
 			>
 				ARCHIVE PLATE // {chapterArt.archiveId} · {chapterArt.creditLine}
@@ -383,7 +383,7 @@
 								<button
 									type="button"
 									onclick={() => (hubbleCostarActive = false)}
-									class="border px-3 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {!hubbleCostarActive
+									class="border px-3 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {!hubbleCostarActive
 										? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
 										: 'border-[#E8E6E1]/15 bg-transparent text-[#E8E6E1]/50 hover:text-[#E8E6E1]'}"
 								>
@@ -392,7 +392,7 @@
 								<button
 									type="button"
 									onclick={() => (hubbleCostarActive = true)}
-									class="border px-3 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {hubbleCostarActive
+									class="border px-3 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {hubbleCostarActive
 										? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
 										: 'border-[#E8E6E1]/15 bg-transparent text-[#E8E6E1]/50 hover:text-[#E8E6E1]'}"
 								>
@@ -409,7 +409,7 @@
 									<button
 										type="button"
 										onclick={() => (ligoDetectorOverlay = mode.id as 'both' | 'h1' | 'l1')}
-										class="border px-2.5 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {ligoDetectorOverlay ===
+										class="border px-2.5 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {ligoDetectorOverlay ===
 										mode.id
 											? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
 											: 'border-[#E8E6E1]/15 bg-transparent text-[#E8E6E1]/50 hover:text-[#E8E6E1]'}"
@@ -423,7 +423,7 @@
 								<button
 									type="button"
 									onclick={() => (jwstPhased = false)}
-									class="border px-3 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {!jwstPhased
+									class="border px-3 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {!jwstPhased
 										? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
 										: 'border-[#E8E6E1]/15 bg-transparent text-[#E8E6E1]/50 hover:text-[#E8E6E1]'}"
 								>
@@ -432,7 +432,7 @@
 								<button
 									type="button"
 									onclick={() => (jwstPhased = true)}
-									class="border px-3 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {jwstPhased
+									class="border px-3 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {jwstPhased
 										? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
 										: 'border-[#E8E6E1]/15 bg-transparent text-[#E8E6E1]/50 hover:text-[#E8E6E1]'}"
 								>
@@ -543,11 +543,11 @@
 						{#each milestone.keyStats as stat, sIdx}
 							<div class="{sIdx >= 4 ? 'hidden lg:flex' : 'flex'} flex-col">
 								<div
-									class="flex items-start justify-between gap-2 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/68"
+									class="flex items-start justify-between gap-2 font-mono-tech text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[#E8E6E1]/68"
 								>
 									<span class="leading-snug">{stat.label}</span>
 									{#if stat.unit}
-										<span class="text-[10px] text-[#E8E6E1]/44 shrink-0">{stat.unit}</span>
+										<span class="text-[11px] text-[#E8E6E1]/44 shrink-0">{stat.unit}</span>
 									{/if}
 								</div>
 								<div
@@ -584,7 +584,7 @@
 							>
 								<span class="text-[#C89B57]">[{String(sIdx + 1).padStart(2, '0')}]</span>
 								<span>{getPublicationLabel(url)}</span>
-								<span class="text-[10px] opacity-60">↗</span>
+								<span class="text-[11px] opacity-60">↗</span>
 							</a>
 						{/each}
 					</div>

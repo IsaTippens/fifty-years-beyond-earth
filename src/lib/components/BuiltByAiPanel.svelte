@@ -117,7 +117,7 @@
 					{ k: 'CUSTOM SHADERS', v: '100% Procedural' }
 				] as metric}
 					<div class="px-3 py-2 sm:px-4 sm:py-3 bg-[#050607]">
-						<div class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
+						<div class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
 							{metric.k}
 						</div>
 						<div class="mt-0.5 font-display text-base sm:text-lg font-normal text-[#C89B57]">
@@ -132,7 +132,7 @@
 		<div
 			class="mt-5 md:mt-10 border border-[rgba(232,230,225,0.10)] bg-[#050607] p-3 sm:p-7"
 		>
-			<div class="mb-2.5 md:mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(232,230,225,0.10)] pb-2 md:pb-3 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em]">
+			<div class="mb-2.5 md:mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(232,230,225,0.10)] pb-2 md:pb-3 font-mono-tech text-[11px] uppercase tracking-[0.14em]">
 				<span class="text-[#E8E6E1]">
 					MULTI-AGENT ORCHESTRATION &amp; PROCEDURAL SYNTHESIS DAG
 				</span>
@@ -141,183 +141,187 @@
 				</span>
 			</div>
 
-			<svg
-				viewBox="0 0 960 220"
-				class="w-full h-auto select-none"
-				role="img"
-				aria-label="Multi-Agent AI Architecture Diagram"
-			>
-				<rect width="960" height="220" fill="#050607" />
-
-				<!-- Stage 1: Lead Orchestrator -->
-				<g transform="translate(24, 72)">
-					<rect
-						x="0"
-						y="0"
-						width="145"
-						height="76"
-						fill="#08090b"
-						stroke="rgba(232, 230, 225, 0.24)"
-						stroke-width="1"
-					/>
-					<text
-						x="14"
-						y="24"
-						fill="#C89B57"
-						font-family="var(--font-mono)"
-						font-size="8.5"
+			<div class="w-full overflow-x-auto pb-1">
+				<div class="min-w-[960px] w-full">
+					<svg
+						viewBox="0 0 960 245"
+						class="w-full h-auto select-none"
+						role="img"
+						aria-label="Multi-Agent AI Architecture Diagram"
 					>
-						LEAD ORCHESTRATOR
-					</text>
-					<text x="14" y="44" fill="#E8E6E1" font-family="var(--font-mono)" font-size="10">
-						Architecture &amp;
-					</text>
-					<text x="14" y="58" fill="#E8E6E1" font-family="var(--font-mono)" font-size="10">
-						Type Contracts
-					</text>
-				</g>
+						<rect width="960" height="245" fill="#050607" />
 
-				<!-- Stage 2: 7 Parallel Chapter Research Scouts -->
-				<g transform="translate(230, 16)">
-					<rect
-						x="0"
-						y="0"
-						width="205"
-						height="188"
-						fill="#08090b"
-						stroke="#C89B57"
-						stroke-opacity="0.45"
-						stroke-width="1"
-					/>
-					<text
-						x="14"
-						y="20"
-						fill="#C89B57"
-						font-family="var(--font-mono)"
-						font-size="8.5"
-					>
-						WAVE 1: 7 RESEARCH SCOUTS
-					</text>
-					{#each [
-						'ScoutPrologue (1975–1980)',
-						'ScoutChapter1 (1981–1998)',
-						'ScoutChapter2 (1990–2005)',
-						'ScoutChapter3 (2006–2015)',
-						'ScoutChapter4 (2015–2020)',
-						'ScoutChapter5 (2020–2026)',
-						'ScoutEpilogue (2026–2075)'
-					] as scoutName, sIdx}
-						<rect
-							x="12"
-							y={28 + sIdx * 22}
-							width="181"
-							height="18"
-							fill="#050607"
-							stroke="rgba(200, 155, 87, 0.28)"
-							stroke-width="0.8"
-						/>
-						<text
-							x="20"
-							y={40 + sIdx * 22}
-							fill="#E8E6E1"
-							font-family="var(--font-mono)"
-							font-size="8.5"
-						>
-							· {scoutName}
-						</text>
-					{/each}
-				</g>
+						<!-- Stage 1: Lead Orchestrator -->
+						<g transform="translate(18, 76)">
+							<rect
+								x="0"
+								y="0"
+								width="162"
+								height="90"
+								fill="#08090b"
+								stroke="rgba(232, 230, 225, 0.24)"
+								stroke-width="1"
+							/>
+							<text
+								x="12"
+								y="26"
+								fill="#C89B57"
+								font-family="var(--font-mono)"
+								font-size="12"
+							>
+								LEAD ORCHESTRATOR
+							</text>
+							<text x="12" y="50" fill="#E8E6E1" font-family="var(--font-mono)" font-size="12">
+								Architecture &amp;
+							</text>
+							<text x="12" y="70" fill="#E8E6E1" font-family="var(--font-mono)" font-size="12">
+								Type Contracts
+							</text>
+						</g>
 
-				<!-- Stage 3: 5 Parallel Engineering Workers -->
-				<g transform="translate(495, 22)">
-					<rect
-						x="0"
-						y="0"
-						width="225"
-						height="176"
-						fill="#08090b"
-						stroke="rgba(232, 230, 225, 0.24)"
-						stroke-width="1"
-					/>
-					<text
-						x="14"
-						y="20"
-						fill="#C89B57"
-						font-family="var(--font-mono)"
-						font-size="8.5"
-					>
-						WAVE 2: 5 ENGINEERING AGENTS
-					</text>
-					{#each [
-						'BuildShadersAndStarfield (GLSL)',
-						'BuildSaturnSetPiece (3D Rings)',
-						'BuildExoplanetOrrery (3D Resonance)',
-						'BuildHudHeroAndTimeline (HUD)',
-						'BuildNarrativeAndShowcase (SVG/Audio)'
-					] as workerName, wIdx}
-						<rect
-							x="12"
-							y={30 + wIdx * 28}
-							width="201"
-							height="22"
-							fill="#050607"
-							stroke="rgba(232, 230, 225, 0.14)"
-							stroke-width="0.8"
-						/>
-						<text
-							x="20"
-							y={44 + wIdx * 28}
-							fill="rgba(232, 230, 225, 0.82)"
-							font-family="var(--font-mono)"
-							font-size="8.5"
-						>
-							· {workerName}
-						</text>
-					{/each}
-				</g>
+						<!-- Stage 2: 7 Parallel Chapter Research Scouts -->
+						<g transform="translate(215, 12)">
+							<rect
+								x="0"
+								y="0"
+								width="225"
+								height="220"
+								fill="#08090b"
+								stroke="#C89B57"
+								stroke-opacity="0.45"
+								stroke-width="1"
+							/>
+							<text
+								x="12"
+								y="22"
+								fill="#C89B57"
+								font-family="var(--font-mono)"
+								font-size="12"
+							>
+								WAVE 1: 7 RESEARCH SCOUTS
+							</text>
+							{#each [
+								'ScoutPrologue (1975–1980)',
+								'ScoutChapter1 (1981–1998)',
+								'ScoutChapter2 (1990–2005)',
+								'ScoutChapter3 (2006–2015)',
+								'ScoutChapter4 (2015–2020)',
+								'ScoutChapter5 (2020–2026)',
+								'ScoutEpilogue (2026–2075)'
+							] as scoutName, sIdx}
+								<rect
+									x="10"
+									y={32 + sIdx * 26}
+									width="205"
+									height="22"
+									fill="#050607"
+									stroke="rgba(200, 155, 87, 0.28)"
+									stroke-width="0.8"
+								/>
+								<text
+									x="16"
+									y={47 + sIdx * 26}
+									fill="#E8E6E1"
+									font-family="var(--font-mono)"
+									font-size="11.5"
+								>
+									· {scoutName}
+								</text>
+							{/each}
+						</g>
 
-				<!-- Stage 4: Real Chromium Verification Loop -->
-				<g transform="translate(775, 62)">
-					<rect
-						x="0"
-						y="0"
-						width="160"
-						height="96"
-						fill="#08090b"
-						stroke="#C89B57"
-						stroke-opacity="0.55"
-						stroke-width="1"
-					/>
-					<text
-						x="14"
-						y="24"
-						fill="#C89B57"
-						font-family="var(--font-mono)"
-						font-size="8.5"
-					>
-						WAVE 3: LIVE VERIFY
-					</text>
-					<text x="14" y="44" fill="#E8E6E1" font-family="var(--font-mono)" font-size="10">
-						Headless Chromium
-					</text>
-					<text x="14" y="60" fill="rgba(232, 230, 225, 0.6)" font-family="var(--font-mono)" font-size="8.5">
-						· Desktop 1440×900
-					</text>
-					<text x="14" y="74" fill="rgba(232, 230, 225, 0.6)" font-family="var(--font-mono)" font-size="8.5">
-						· Mobile 390×844
-					</text>
-					<text x="14" y="88" fill="#C89B57" font-family="var(--font-mono)" font-size="8.5">
-						· 0 Console Errors
-					</text>
-				</g>
+						<!-- Stage 3: 5 Parallel Engineering Workers -->
+						<g transform="translate(475, 22)">
+							<rect
+								x="0"
+								y="0"
+								width="245"
+								height="200"
+								fill="#08090b"
+								stroke="rgba(232, 230, 225, 0.24)"
+								stroke-width="1"
+							/>
+							<text
+								x="12"
+								y="22"
+								fill="#C89B57"
+								font-family="var(--font-mono)"
+								font-size="12"
+							>
+								WAVE 2: 5 ENGINEERING AGENTS
+							</text>
+							{#each [
+								'BuildShadersAndStarfield (GLSL)',
+								'BuildSaturnSetPiece (3D Rings)',
+								'BuildExoplanetOrrery (3D Orrery)',
+								'BuildHudHeroAndTimeline (HUD)',
+								'BuildNarrativeAndShowcase (SVG)'
+							] as workerName, wIdx}
+								<rect
+									x="10"
+									y={34 + wIdx * 31}
+									width="225"
+									height="25"
+									fill="#050607"
+									stroke="rgba(232, 230, 225, 0.14)"
+									stroke-width="0.8"
+								/>
+								<text
+									x="16"
+									y={51 + wIdx * 31}
+									fill="rgba(232, 230, 225, 0.85)"
+									font-family="var(--font-mono)"
+									font-size="11.5"
+								>
+									· {workerName}
+								</text>
+							{/each}
+						</g>
 
-				<!-- Connecting Flow Hairlines -->
-				<g stroke="#C89B57" stroke-opacity="0.55" stroke-width="1" fill="none">
-					<line x1="169" y1="110" x2="230" y2="110" />
-					<line x1="435" y1="110" x2="495" y2="110" />
-					<line x1="720" y1="110" x2="775" y2="110" />
-				</g>
-			</svg>
+						<!-- Stage 4: Real Chromium Verification Loop -->
+						<g transform="translate(755, 62)">
+							<rect
+								x="0"
+								y="0"
+								width="188"
+								height="120"
+								fill="#08090b"
+								stroke="#C89B57"
+								stroke-opacity="0.55"
+								stroke-width="1"
+							/>
+							<text
+								x="12"
+								y="24"
+								fill="#C89B57"
+								font-family="var(--font-mono)"
+								font-size="12"
+							>
+								WAVE 3: LIVE VERIFY
+							</text>
+							<text x="12" y="48" fill="#E8E6E1" font-family="var(--font-mono)" font-size="12">
+								Headless Chromium
+							</text>
+							<text x="12" y="70" fill="rgba(232, 230, 225, 0.72)" font-family="var(--font-mono)" font-size="11.5">
+								· Desktop 1440×900
+							</text>
+							<text x="12" y="90" fill="rgba(232, 230, 225, 0.72)" font-family="var(--font-mono)" font-size="11.5">
+								· Mobile 390×844
+							</text>
+							<text x="12" y="110" fill="#C89B57" font-family="var(--font-mono)" font-size="11.5">
+								· 0 Console Errors
+							</text>
+						</g>
+
+						<!-- Connecting Flow Hairlines -->
+						<g stroke="#C89B57" stroke-opacity="0.55" stroke-width="1.2" fill="none">
+							<line x1="180" y1="122" x2="215" y2="122" />
+							<line x1="440" y1="122" x2="475" y2="122" />
+							<line x1="720" y1="122" x2="755" y2="122" />
+						</g>
+					</svg>
+				</div>
+			</div>
 		</div>
 
 		<!-- 4 Capability Pillars Hairline Matrix -->
@@ -338,7 +342,7 @@
 						? 'bg-[rgba(200,155,87,0.06)]'
 						: 'bg-[#050607] hover:bg-[rgba(232,230,225,0.02)]'}"
 				>
-					<div class="flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em]">
+					<div class="flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[11px] uppercase tracking-[0.14em]">
 						<span class="text-[#C89B57]">
 							{pillar.code}
 						</span>
@@ -355,7 +359,7 @@
 							<div class="font-display text-2xl sm:text-3xl font-normal text-[#C89B57]">
 								{pillar.metricValue}
 							</div>
-							<div class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
+							<div class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
 								{pillar.metricUnit}
 							</div>
 						</div>

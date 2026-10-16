@@ -28,7 +28,11 @@
 	let isVisibleInViewport = $state<boolean>(true);
 	let isDraggingCanvas = $state<boolean>(false);
 	let cameraPreset = $state<'perspective' | 'top-down' | 'transit'>('perspective');
-	let mobileLiteMode = $state<boolean>(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+	let mobileLiteMode = $state<boolean>(false);
+	let isMobileViewport = $state<boolean>(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+	let dataPanelOpen = $state<boolean>(typeof window !== 'undefined' ? window.innerWidth >= 768 : false);
+	let orbitAzimuthDeg = $state<number>(Math.round((0.62 * 180) / Math.PI));
+	let orbitElevationDeg = $state<number>(Math.round((0.56 * 180) / Math.PI));
 	let cleanupOrreryWebGL: (() => void) | null = null;
 	// Projected 2D screen coordinates for planet labels
 	let projectedLabels = $state<
@@ -1031,6 +1035,8 @@
 				lastPointerPos = { x: e.clientX, y: e.clientY };
 				targetAzimuth -= dx * 0.0065;
 				targetElevation = Math.max(0.04, Math.min(1.52, targetElevation + dy * 0.006));
+				orbitAzimuthDeg = Math.round((targetAzimuth * 180) / Math.PI);
+				orbitElevationDeg = Math.round((targetElevation * 180) / Math.PI);
 			}
 		};
 
@@ -1295,13 +1301,20 @@
 	};
 
 	onMount(() => {
-		if (window.innerWidth < 768) {
-			mobileLiteMode = true;
-		} else {
-			cleanupOrreryWebGL = mountOrreryWebGL() ?? null;
-		}
+		const syncViewportMode = () => {
+			const mobile = window.innerWidth < 768;
+			if (mobile !== isMobileViewport) {
+				isMobileViewport = mobile;
+				dataPanelOpen = !mobile;
+			}
+		};
+		isMobileViewport = window.innerWidth < 768;
+		dataPanelOpen = !isMobileViewport;
+		window.addEventListener('resize', syncViewportMode, { passive: true });
+		cleanupOrreryWebGL = mountOrreryWebGL() ?? null;
 
 		return () => {
+			window.removeEventListener('resize', syncViewportMode);
 			if (cleanupOrreryWebGL) {
 				cleanupOrreryWebGL();
 				cleanupOrreryWebGL = null;
@@ -1311,138 +1324,22 @@
 </script>
 
 <section
+	data-testid="orrery-scene-section"
 	class="relative my-6 md:my-10 overflow-hidden border-y border-[rgba(232,230,225,0.12)] bg-[#050607] py-4 md:py-8 px-4 sm:px-6 lg:px-8"
 	aria-label="Interactive 3D Exoplanet Orrery and JWST Atmospheric Spectrometer"
 >
 	{#if mobileLiteMode}
-		<!-- Lightweight Mobile Documentary Plate (~460px total height) -->
-		<div class="flex flex-col gap-3" data-testid="orrery-mobile-lite">
-			<!-- Top Header & Enable 3D Button -->
-			<div class="flex items-center justify-between gap-2 border-b border-[rgba(232,230,225,0.12)] pb-2.5">
-				<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57]">
-					SET PIECE 02 · {EXOPLANET_CENSUS.confirmedPlanets.toLocaleString()}+ WORLDS
-				</span>
-				<button
-					type="button"
-					onclick={enableInteractiveOrrery}
-					class="shrink-0 cursor-pointer border border-[#C89B57]/50 bg-[rgba(200,155,87,0.10)] px-2.5 py-1 font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#C89B57] hover:bg-[rgba(200,155,87,0.20)] transition-colors"
-				>
-					[Enable Interactive 3D Orrery]
-				</button>
+		<div class="flex flex-col gap-3 p-4" data-testid="orrery-mobile-lite">
+			<div class="font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C89B57]">
+				SET PIECE 02 · {selectedPlanet.name} ({currentSystem.star.name})
 			</div>
-
-			<!-- Compact 4-System Switcher -->
-			<div class="grid grid-cols-4 divide-x divide-[rgba(232,230,225,0.12)] border border-[rgba(232,230,225,0.12)]" role="tablist" aria-label="Planetary System Switcher">
-				{#each EXOPLANET_SYSTEMS as sys}
-					{@const active = sys.id === selectedSystemId}
-					<button
-						type="button"
-						role="tab"
-						aria-selected={active}
-						onclick={() => selectSystem(sys.id)}
-						class="cursor-pointer px-2 py-1.5 text-center transition-colors {active
-							? 'bg-[rgba(200,155,87,0.14)] text-[#E8E6E1]'
-							: 'text-[rgba(232,230,225,0.68)]'}"
-					>
-						<span class="block font-mono-tech text-[10px] uppercase tracking-[0.06em] leading-snug {active ? 'text-[#C89B57]' : ''}">
-							{sys.shortLabel}
-						</span>
-					</button>
-				{/each}
-			</div>
-
-			<!-- Static SVG Orbital Diagram + Interactive Planet Nodes -->
-			<div class="border border-[rgba(232,230,225,0.12)] bg-[#08090C] px-3 py-2">
-				<svg viewBox="0 0 360 76" class="h-18 w-full overflow-visible" role="img" aria-label="Orbital diagram for {currentSystem.star.name}">
-					<!-- Habitable Zone Band -->
-					<rect x="135" y="6" width="110" height="64" fill="rgba(200,155,87,0.08)" stroke="rgba(200,155,87,0.28)" stroke-dasharray="2 2" />
-					<text x="190" y="16" text-anchor="middle" fill="#C89B57" font-family="var(--font-mono)" font-size="7.5">HABITABLE ZONE</text>
-					<!-- Ecliptic Axis -->
-					<line x1="24" y1="42" x2="346" y2="42" stroke="rgba(232,230,225,0.18)" stroke-width="1" />
-					<!-- Host Star -->
-					<circle cx="24" cy="42" r="10" fill={currentSystem.star.midColor} />
-					<text x="24" y="66" text-anchor="middle" fill="rgba(232,230,225,0.65)" font-family="var(--font-mono)" font-size="7.5">STAR</text>
-					<!-- Planets -->
-					{#each currentSystem.planets as planet, idx (planet.id)}
-						{@const px = 58 + (idx / Math.max(1, currentSystem.planets.length - 1)) * 276}
-						{@const pr = Math.max(4, Math.min(9.5, 4.2 * Math.pow(planet.radiusEarth, 0.32)))}
-						{@const isSel = planet.id === selectedPlanet.id}
-						<g
-							class="cursor-pointer"
-							role="button"
-							tabindex="0"
-							onclick={() => (selectedPlanetId = planet.id)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									selectedPlanetId = planet.id;
-								}
-							}}
-						>
-							{#if isSel}
-								<circle cx={px} cy="42" r={pr + 4} fill="none" stroke="#C89B57" stroke-width="1.2" />
-							{/if}
-							<circle cx={px} cy="42" r={pr} fill={isSel ? '#C89B57' : planet.primaryColor} stroke="#050607" stroke-width="1" />
-							<text x={px} y="66" text-anchor="middle" fill={isSel ? '#C89B57' : '#E8E6E1'} font-family="var(--font-mono)" font-size="8.5">
-								{planet.letter}
-							</text>
-						</g>
-					{/each}
-				</svg>
-			</div>
-
-			<!-- Selected World Title & >=16px Description -->
-			<div>
-				<div class="flex items-baseline justify-between gap-2">
-					<h4 class="font-display text-lg font-normal text-[#E8E6E1]">{selectedPlanet.name}</h4>
-					<span class="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#C89B57]">
-						{selectedPlanet.inHabitableZone ? '● HABITABLE ZONE' : selectedPlanet.discoveryMethod.split('(')[0]}
-					</span>
-				</div>
-				<p class="mt-0.5 font-sans text-base leading-[1.45] text-[rgba(232,230,225,0.78)]">
-					{selectedPlanet.subtitle}
-				</p>
-			</div>
-
-			<!-- Compact 2x2 Planet Telemetry Grid -->
-			<div class="grid grid-cols-2 border border-[rgba(232,230,225,0.12)] divide-x divide-y divide-[rgba(232,230,225,0.10)] font-mono-tech text-[11px] uppercase tracking-[0.12em]">
-				<div class="px-3 py-1.5">
-					<span class="text-[10px] text-[rgba(232,230,225,0.55)]">RADIUS / MASS</span>
-					<div class="text-xs text-[#E8E6E1]">{selectedPlanet.radiusEarth.toFixed(2)} R⊕ · {selectedPlanet.massEarth.toFixed(2)} M⊕</div>
-				</div>
-				<div class="px-3 py-1.5">
-					<span class="text-[10px] text-[rgba(232,230,225,0.55)]">SEMI-MAJOR / PERIOD</span>
-					<div class="text-xs text-[#C89B57]">{selectedPlanet.semiMajorAxisAu.toFixed(3)} AU · {selectedPlanet.orbitalPeriodDays.toFixed(1)}D</div>
-				</div>
-				<div class="px-3 py-1.5">
-					<span class="text-[10px] text-[rgba(232,230,225,0.55)]">EQUILIBRIUM TEMP</span>
-					<div class="text-xs text-[#C89B57]">{selectedPlanet.equilibriumTempK.toFixed(0)} K ({(selectedPlanet.equilibriumTempK - 273.15).toFixed(0)} °C)</div>
-				</div>
-				<div class="px-3 py-1.5">
-					<span class="text-[10px] text-[rgba(232,230,225,0.55)]">TRANSIT DEPTH</span>
-					<div class="text-xs text-[#E8E6E1]">{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM</div>
-				</div>
-			</div>
-
-			<!-- Compact JWST Transmission Spectrum Strip -->
-			<div class="border border-[rgba(232,230,225,0.12)] bg-[#050607] px-3 py-2">
-				<div class="mb-1 flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[10px] uppercase tracking-[0.12em]">
-					<span class="text-[#C89B57]">JWST NIRSPEC SPECTRUM (0.6–5.3 μm)</span>
-					<span class="text-[rgba(232,230,225,0.68)]">
-						{selectedPlanet.spectralFeatures.slice(0, 3).map((f) => `${f.molecule} ${f.wavelengthUm}μm`).join(' · ')}
-					</span>
-				</div>
-				<svg viewBox="0 0 460 148" class="h-12 w-full overflow-hidden" preserveAspectRatio="none" role="img" aria-label="Compact JWST spectrum for {selectedPlanet.name}">
-					<path d={spectrumSvg.areaPath} fill="rgba(200,155,87,0.18)" />
-					<path d={spectrumSvg.linePath} fill="none" stroke="#C89B57" stroke-width="2.2" />
-				</svg>
-			</div>
+			<p class="font-sans text-base text-[#E8E6E1]/80">{selectedPlanet.subtitle}</p>
 		</div>
 	{:else}
 	<!-- Top Header & Census Telemetry Banner -->
 	<div class="mb-8 flex flex-col justify-between gap-6 border-b border-[rgba(232,230,225,0.12)] pb-6 lg:flex-row lg:items-end">
 		<div>
-			<div class="mb-3 flex flex-wrap items-center gap-4 font-mono-tech text-[11px] uppercase tracking-[0.16em]">
+			<div class="mb-3 flex flex-wrap items-center gap-4 font-mono-tech text-xs uppercase tracking-[0.16em]">
 				<span class="text-[#C89B57]">
 					SET PIECE 02 · WEBGL ORRERY &amp; JWST SPECTROMETER
 				</span>
@@ -1506,7 +1403,7 @@
 		</div>
 
 		<!-- Visual Layer Toggles -->
-		<div class="flex flex-wrap items-center gap-5 font-mono-tech text-[11px] uppercase tracking-[0.16em]">
+		<div class="flex flex-wrap items-center gap-5 font-mono-tech text-xs uppercase tracking-[0.14em]">
 			<button
 				type="button"
 				onclick={() => (showHabitableZone = !showHabitableZone)}
@@ -1541,20 +1438,24 @@
 
 	<!-- Main Two-Column Interactive Workspace: 3D Orrery Viewport (Left) + Editorial Telemetry & JWST Spectra (Right) -->
 	<div class="grid grid-cols-1 gap-8 xl:grid-cols-12">
-		<!-- Left 7 Columns: 3D WebGL Orrery Viewport + Time Scrubber + Planet Index Table -->
-		<div class="flex flex-col gap-5 xl:col-span-7">
+		<!-- Left Column (Expands to Full 12 Cols when DATA panel is collapsed): 3D WebGL Orrery Viewport -->
+		<div class="flex flex-col gap-5 {dataPanelOpen ? 'xl:col-span-7' : 'xl:col-span-12'}">
 			<!-- 3D Viewport Container -->
 			<div
 				bind:this={containerEl}
-				class="relative h-[440px] w-full overflow-hidden border border-[rgba(232,230,225,0.12)] bg-[#050607] sm:h-[510px]"
+				data-testid="orrery-canvas-container"
+				class="relative h-[370px] sm:h-[510px] w-full overflow-hidden border border-[rgba(232,230,225,0.12)] bg-[#050607]"
 			>
 				<canvas
 					bind:this={canvasEl}
+					data-testid="orrery-webgl-canvas"
+					data-orbit-azimuth={orbitAzimuthDeg}
+					data-orbit-elevation={orbitElevationDeg}
 					class="h-full w-full touch-none {isDraggingCanvas ? 'cursor-grabbing' : 'cursor-grab'}"
 				></canvas>
 
-				<!-- Projected 2D Planet Marker Labels over 3D Scene -->
-				{#if showOrbitLabels}
+				<!-- Projected 2D Planet Marker Labels over 3D Scene (pointer-events-none container; >=12px buttons) -->
+				{#if showOrbitLabels && (!isMobileViewport || dataPanelOpen)}
 					<div class="pointer-events-none absolute inset-0 overflow-hidden">
 						{#each projectedLabels as lbl (lbl.id)}
 							{#if lbl.visible}
@@ -1562,11 +1463,11 @@
 									type="button"
 									onclick={() => (selectedPlanetId = lbl.id)}
 									style="transform: translate3d({lbl.x}px, {lbl.y}px, 0) translate(-50%, -100%);"
-									class="pointer-events-auto absolute top-0 left-0 cursor-pointer border px-1.5 py-0.5 font-mono-tech text-[11px] uppercase tracking-[0.16em] transition-colors {lbl.isSelected
+									class="pointer-events-auto absolute top-0 left-0 cursor-pointer border px-1.5 py-0.5 font-mono-tech text-xs uppercase tracking-[0.12em] transition-colors {lbl.isSelected
 										? 'border-[#C89B57] bg-[#050607] text-[#C89B57]'
 										: lbl.inHz
 											? 'border-[rgba(200,155,87,0.45)] bg-[rgba(5,6,7,0.85)] text-[#E8E6E1] hover:border-[#C89B57]'
-											: 'border-[rgba(232,230,225,0.18)] bg-[rgba(5,6,7,0.82)] text-[rgba(232,230,225,0.72)] hover:border-[rgba(232,230,225,0.45)] hover:text-[#E8E6E1]'}"
+											: 'border-[rgba(232,230,225,0.18)] bg-[rgba(5,6,7,0.82)] text-[rgba(232,230,225,0.75)] hover:border-[rgba(232,230,225,0.45)] hover:text-[#E8E6E1]'}"
 								>
 									{lbl.letter}
 								</button>
@@ -1575,131 +1476,191 @@
 					</div>
 				{/if}
 
-				<!-- Top-Left Host Star Telemetry Hairline Overlay -->
-				<div
-					class="pointer-events-none absolute top-4 left-4 max-w-xs border-l border-[rgba(232,230,225,0.18)] bg-[rgba(5,6,7,0.82)] pl-3.5 pr-4 py-2.5 backdrop-blur-sm"
-				>
-					<div class="flex items-center gap-2.5">
-						<span
-							class="h-2 w-2 rounded-full"
-							style="background-color: {currentSystem.star.midColor};"
-						></span>
-						<span class="font-display text-sm font-normal text-[#E8E6E1]">
-							{currentSystem.star.name}
-						</span>
-						<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57]">
-							{currentSystem.star.spectralType}
-						</span>
-					</div>
-					<div class="mt-2 grid grid-cols-3 gap-3 border-t border-[rgba(232,230,225,0.10)] pt-2 font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-						<div>
-							<span class="block text-[rgba(232,230,225,0.6)]">TEFF</span>
-							<span class="text-[#E8E6E1]">{currentSystem.star.effectiveTempK} K</span>
-						</div>
-						<div>
-							<span class="block text-[rgba(232,230,225,0.6)]">MASS / RAD</span>
-							<span class="text-[#E8E6E1]">{currentSystem.star.massSolar} M☉</span>
-						</div>
-						<div>
-							<span class="block text-[rgba(232,230,225,0.6)]">DIST</span>
-							<span class="text-[#C89B57]">
-								{currentSystem.star.distanceLightYears < 0.01
-									? '1.00 AU'
-									: `${currentSystem.star.distanceLightYears} LY`}
+				<!-- Persistent Top-Right DATA − / DATA + Toggle Chip (Always in Margin; Collapsed by Default on Mobile) -->
+				<div class="pointer-events-none absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex flex-col items-end gap-2">
+					<div class="flex items-center gap-2">
+						{#if !dataPanelOpen}
+							<span class="hidden sm:inline-block border border-[rgba(232,230,225,0.14)] bg-[rgba(5,6,7,0.82)] px-2.5 py-1.5 font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.72)] backdrop-blur-sm">
+								{currentSystem.star.name} · {selectedPlanet.name}
 							</span>
-						</div>
+						{/if}
+						<button
+							type="button"
+							data-testid="orrery-data-toggle"
+							aria-expanded={dataPanelOpen}
+							onclick={() => (dataPanelOpen = !dataPanelOpen)}
+							class="pointer-events-auto cursor-pointer border border-[#C89B57]/75 bg-[rgba(5,6,7,0.9)] px-3 py-1.5 font-mono-tech text-xs font-medium uppercase tracking-[0.16em] text-[#C89B57] backdrop-blur-sm transition-colors hover:border-[#DDB474] hover:bg-[rgba(200,155,87,0.15)] hover:text-[#DDB474]"
+						>
+							{dataPanelOpen ? 'DATA −' : 'DATA +'}
+						</button>
 					</div>
+
+					{#if !isMobileViewport && dataPanelOpen}
+						<div class="pointer-events-auto flex items-center divide-x divide-[rgba(232,230,225,0.12)] border border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.85)] backdrop-blur-sm">
+							<button
+								type="button"
+								onclick={() => applyCameraPreset('perspective')}
+								class="font-mono-tech cursor-pointer px-2.5 py-1.5 text-xs uppercase tracking-[0.14em] transition-colors {cameraPreset ===
+								'perspective'
+									? 'text-[#C89B57]'
+									: 'text-[rgba(232,230,225,0.65)] hover:text-[#E8E6E1]'}"
+							>
+								3D TILT
+							</button>
+							<button
+								type="button"
+								onclick={() => applyCameraPreset('top-down')}
+								class="font-mono-tech cursor-pointer px-2.5 py-1.5 text-xs uppercase tracking-[0.14em] transition-colors {cameraPreset ===
+								'top-down'
+									? 'text-[#C89B57]'
+									: 'text-[rgba(232,230,225,0.65)] hover:text-[#E8E6E1]'}"
+							>
+								TOP-DOWN
+							</button>
+							<button
+								type="button"
+								onclick={() => applyCameraPreset('transit')}
+								class="font-mono-tech cursor-pointer px-2.5 py-1.5 text-xs uppercase tracking-[0.14em] transition-colors {cameraPreset ===
+								'transit'
+									? 'text-[#C89B57]'
+									: 'text-[rgba(232,230,225,0.65)] hover:text-[#E8E6E1]'}"
+							>
+								TRANSIT
+							</button>
+						</div>
+
+						<div class="pointer-events-auto flex items-center divide-x divide-[rgba(232,230,225,0.12)] border border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.85)] backdrop-blur-sm">
+							<button
+								type="button"
+								onclick={() => adjustZoom(-3.0)}
+								class="font-mono-tech cursor-pointer px-2.5 py-1 text-xs text-[#E8E6E1] hover:text-[#C89B57]"
+								title="Zoom In"
+							>
+								+
+							</button>
+							<span class="font-mono-tech px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.65)]">ZOOM</span>
+							<button
+								type="button"
+								onclick={() => adjustZoom(3.0)}
+								class="font-mono-tech cursor-pointer px-2.5 py-1 text-xs text-[#E8E6E1] hover:text-[#C89B57]"
+								title="Zoom Out"
+							>
+								−
+							</button>
+						</div>
+					{/if}
 				</div>
 
-				<!-- Top-Right Camera View Presets & Zoom Buttons -->
-				<div class="absolute top-4 right-4 flex flex-col items-end gap-2">
-					<div class="flex items-center divide-x divide-[rgba(232,230,225,0.12)] border border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.85)] backdrop-blur-sm">
+				<!-- DESKTOP ONLY Margin Overlays (Clear of Center Focal Point; pointer-events-none so drag works everywhere) -->
+				{#if !isMobileViewport && dataPanelOpen}
+					<!-- Top-Left Margin: Compact Host Star Telemetry -->
+					<div
+						data-testid="orrery-desktop-star-overlay"
+						class="pointer-events-none absolute top-3.5 left-3.5 max-w-[235px] border-l border-[rgba(232,230,225,0.22)] bg-[rgba(5,6,7,0.8)] pl-3 pr-3 py-2 backdrop-blur-sm"
+					>
+						<div class="flex items-center gap-2">
+							<span
+								class="h-2 w-2 rounded-full"
+								style="background-color: {currentSystem.star.midColor};"
+							></span>
+							<span class="font-display text-sm font-normal text-[#E8E6E1]">
+								{currentSystem.star.name}
+							</span>
+							<span class="font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C89B57]">
+								{currentSystem.star.spectralType}
+							</span>
+						</div>
+						<div class="mt-1.5 grid grid-cols-3 gap-2.5 border-t border-[rgba(232,230,225,0.10)] pt-1.5 font-mono-tech text-[11px] uppercase tracking-[0.12em]">
+							<div>
+								<span class="block text-[rgba(232,230,225,0.6)]">TEFF</span>
+								<span class="text-xs text-[#E8E6E1]">{currentSystem.star.effectiveTempK} K</span>
+							</div>
+							<div>
+								<span class="block text-[rgba(232,230,225,0.6)]">MASS</span>
+								<span class="text-xs text-[#E8E6E1]">{currentSystem.star.massSolar} M☉</span>
+							</div>
+							<div>
+								<span class="block text-[rgba(232,230,225,0.6)]">DIST</span>
+								<span class="text-xs text-[#C89B57]">
+									{currentSystem.star.distanceLightYears < 0.01
+										? '1.00 AU'
+										: `${currentSystem.star.distanceLightYears} LY`}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Bottom Margin: Slim Laplace Resonance Conjunction Readout -->
+					<div
+						data-testid="orrery-desktop-resonance-overlay"
+						class="pointer-events-none absolute bottom-0 left-0 right-0 flex flex-wrap items-center justify-between gap-3 border-t border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.82)] px-4 py-2 backdrop-blur-sm"
+					>
+						<div class="flex flex-wrap items-center gap-3 font-mono-tech text-xs uppercase tracking-[0.14em]">
+							<span
+								class="h-1.5 w-1.5 rounded-full {activeConjunctions.length > 0
+									? 'bg-[#C89B57]'
+									: 'bg-[rgba(232,230,225,0.35)]'}"
+							></span>
+							<span class="text-[#E8E6E1]">
+								{currentSystem.hasLaplaceResonance
+									? 'LAPLACE RESONANCE (24:15:9:6:4:3:2)'
+									: 'INFERIOR CONJUNCTION TRACKER'}
+							</span>
+							{#if activeConjunctions.length > 0}
+								{#each activeConjunctions as conj}
+									<span class="text-[#C89B57]">
+										[{conj.pairLabel} · {conj.ratio} ALIGNED]
+									</span>
+								{/each}
+							{:else}
+								<span class="text-[11px] text-[rgba(232,230,225,0.6)]">
+									DRAG TO ORBIT · SCROLL TO ZOOM · CLICK WORLD
+								</span>
+							{/if}
+						</div>
+						<div class="font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C89B57]">
+							T + {simulationDays.toFixed(1)} D · CONJUNCTIONS: {conjunctionCount}
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- MOBILE CAMERA & HOST STAR STRIP BELOW SCENE (Never overlaps 3D scene on mobile) -->
+			{#if isMobileViewport}
+				<div
+					data-testid="orrery-mobile-controls-below"
+					class="flex flex-wrap items-center justify-between gap-2 border border-[rgba(232,230,225,0.12)] bg-[#08090B] px-3 py-2 font-mono-tech text-xs uppercase tracking-[0.12em]"
+				>
+					<div class="flex items-center gap-2">
 						<button
 							type="button"
 							onclick={() => applyCameraPreset('perspective')}
-							class="font-mono-tech cursor-pointer px-2.5 py-1.5 text-[11px] uppercase tracking-[0.16em] transition-colors {cameraPreset ===
-							'perspective'
-								? 'text-[#C89B57]'
-								: 'text-[rgba(232,230,225,0.6)] hover:text-[#E8E6E1]'}"
+							class="cursor-pointer {cameraPreset === 'perspective' ? 'text-[#C89B57]' : 'text-[#E8E6E1]/65'}"
 						>
 							3D TILT
 						</button>
+						<span class="text-[#E8E6E1]/25">·</span>
 						<button
 							type="button"
 							onclick={() => applyCameraPreset('top-down')}
-							class="font-mono-tech cursor-pointer px-2.5 py-1.5 text-[11px] uppercase tracking-[0.16em] transition-colors {cameraPreset ===
-							'top-down'
-								? 'text-[#C89B57]'
-								: 'text-[rgba(232,230,225,0.6)] hover:text-[#E8E6E1]'}"
+							class="cursor-pointer {cameraPreset === 'top-down' ? 'text-[#C89B57]' : 'text-[#E8E6E1]/65'}"
 						>
 							TOP-DOWN
 						</button>
+						<span class="text-[#E8E6E1]/25">·</span>
 						<button
 							type="button"
 							onclick={() => applyCameraPreset('transit')}
-							class="font-mono-tech cursor-pointer px-2.5 py-1.5 text-[11px] uppercase tracking-[0.16em] transition-colors {cameraPreset ===
-							'transit'
-								? 'text-[#C89B57]'
-								: 'text-[rgba(232,230,225,0.6)] hover:text-[#E8E6E1]'}"
+							class="cursor-pointer {cameraPreset === 'transit' ? 'text-[#C89B57]' : 'text-[#E8E6E1]/65'}"
 						>
 							TRANSIT
 						</button>
 					</div>
-
-					<div class="flex items-center divide-x divide-[rgba(232,230,225,0.12)] border border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.85)] backdrop-blur-sm">
-						<button
-							type="button"
-							onclick={() => adjustZoom(-3.0)}
-							class="font-mono-tech cursor-pointer px-2.5 py-1 text-xs text-[#E8E6E1] hover:text-[#C89B57]"
-							title="Zoom In"
-						>
-							+
-						</button>
-						<span class="font-mono-tech px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">ZOOM</span>
-						<button
-							type="button"
-							onclick={() => adjustZoom(3.0)}
-							class="font-mono-tech cursor-pointer px-2.5 py-1 text-xs text-[#E8E6E1] hover:text-[#C89B57]"
-							title="Zoom Out"
-						>
-							−
-						</button>
+					<div class="text-[11px] text-[#C89B57]">
+						{currentSystem.star.name} · T+{simulationDays.toFixed(0)}D
 					</div>
 				</div>
-
-				<!-- Bottom-Left Laplace Resonance Conjunction Readout -->
-				<div
-					class="pointer-events-none absolute bottom-0 left-0 right-0 flex flex-wrap items-center justify-between gap-3 border-t border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.86)] px-4 py-2.5 backdrop-blur-sm"
-				>
-					<div class="flex flex-wrap items-center gap-3 font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-						<span
-							class="h-1.5 w-1.5 rounded-full {activeConjunctions.length > 0
-								? 'bg-[#C89B57]'
-								: 'bg-[rgba(232,230,225,0.35)]'}"
-						></span>
-						<span class="text-[#E8E6E1]">
-							{currentSystem.hasLaplaceResonance
-								? 'LAPLACE RESONANCE (24:15:9:6:4:3:2)'
-								: 'INFERIOR CONJUNCTION TRACKER'}
-						</span>
-						{#if activeConjunctions.length > 0}
-							{#each activeConjunctions as conj}
-								<span class="text-[#C89B57]">
-									[{conj.pairLabel} · {conj.ratio} ALIGNED]
-								</span>
-							{/each}
-						{:else}
-							<span class="text-[rgba(232,230,225,0.6)]">
-								DRAG TO ORBIT · SCROLL TO ZOOM · CLICK WORLD
-							</span>
-						{/if}
-					</div>
-					<div class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57]">
-						T + {simulationDays.toFixed(1)} D · CONJUNCTIONS: {conjunctionCount}
-					</div>
-				</div>
-			</div>
-
+			{/if}
 			<!-- Time-Warp Speed Scrubber Hairline Bar -->
 			<div
 				class="flex flex-wrap items-center justify-between gap-4 border-y border-[rgba(232,230,225,0.12)] py-3"
@@ -1777,7 +1738,7 @@
 									{planet.name}
 								</span>
 								{#if planet.inHabitableZone}
-									<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57] whitespace-nowrap">
+									<span class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#C89B57] whitespace-nowrap">
 										● HZ
 									</span>
 								{/if}
@@ -1790,99 +1751,107 @@
 				</div>
 			</div>
 			<!-- Interactive SVG Transit Photometry Light-Curve -->
-			<div class="border-t border-[rgba(232,230,225,0.12)] pt-4">
-				<div class="mb-2.5 flex items-baseline justify-between gap-2">
-					<div>
-						<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
-							KEPLER / TESS / JWST PHOTOMETRY
-						</span>
-						<h5 class="font-display mt-0.5 text-base font-normal text-[#E8E6E1]">
-							Stellar Transit Light-Curve Profile
-						</h5>
+			{#if dataPanelOpen}
+				<!-- Interactive SVG Transit Photometry Light-Curve -->
+				<div class="border-t border-[rgba(232,230,225,0.12)] pt-4">
+					<div class="mb-2.5 flex items-baseline justify-between gap-2">
+						<div>
+							<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
+								KEPLER / TESS / JWST PHOTOMETRY
+							</span>
+							<h5 class="font-display mt-0.5 text-base font-normal text-[#E8E6E1]">
+								Stellar Transit Light-Curve Profile
+							</h5>
+						</div>
+						<div class="text-right font-mono-tech text-[11px] uppercase tracking-[0.16em]">
+							<span class="text-xs text-[#C89B57]">
+								ΔF = {selectedPlanet.transitDepthPct.toFixed(4)}%
+							</span>
+							<span class="block text-[rgba(232,230,225,0.6)]">
+								{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM · {selectedPlanet.transitDurationHours}H
+							</span>
+						</div>
 					</div>
-					<div class="text-right font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-						<span class="text-[#C89B57]">
-							ΔF = {selectedPlanet.transitDepthPct.toFixed(4)}%
-						</span>
-						<span class="block text-[rgba(232,230,225,0.6)]">
-							{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM · {selectedPlanet.transitDurationHours}H
-						</span>
+
+					<div class="w-full overflow-x-auto pb-1">
+						<div class="min-w-[440px] w-full">
+							<svg
+								viewBox="0 0 440 128"
+								class="w-full h-auto overflow-visible border border-[rgba(232,230,225,0.12)] bg-[#050607]"
+								role="img"
+								aria-label="Transit Light Curve for {selectedPlanet.name}"
+							>
+								<defs>
+									<linearGradient id="transitFillGrad" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stop-color="#C89B57" stop-opacity="0.22" />
+										<stop offset="100%" stop-color="#050607" stop-opacity="0.0" />
+									</linearGradient>
+								</defs>
+
+								<!-- Reference Flux = 1.0000 Line -->
+								<line
+									x1="0"
+									y1="26"
+									x2="440"
+									y2="26"
+									stroke="rgba(232, 230, 225, 0.16)"
+									stroke-dasharray="3 3"
+								/>
+								<!-- Ingress / Egress Markers -->
+								<line
+									x1={transitSvg.ingressX}
+									y1="14"
+									x2={transitSvg.ingressX}
+									y2="112"
+									stroke="rgba(232, 230, 225, 0.14)"
+									stroke-dasharray="2 3"
+								/>
+								<line
+									x1={transitSvg.egressX}
+									y1="14"
+									x2={transitSvg.egressX}
+									y2="112"
+									stroke="rgba(232, 230, 225, 0.14)"
+									stroke-dasharray="2 3"
+								/>
+
+								<path d={transitSvg.areaPath} fill="url(#transitFillGrad)" />
+								<path
+									d={transitSvg.linePath}
+									fill="none"
+									stroke="#E8E6E1"
+									stroke-width="1.75"
+									stroke-linecap="round"
+								/>
+
+								<!-- Mid-Transit Depth Annotation -->
+								<circle cx="220" cy={transitSvg.dipBottomY} r="3.5" fill="#C89B57" />
+								<text
+									x="220"
+									y={Math.min(106, transitSvg.dipBottomY + 16)}
+									text-anchor="middle"
+									fill="#C89B57"
+									font-family="var(--font-mono)"
+									font-size="12.5"
+								>
+									MID-TRANSIT −{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM
+								</text>
+								<text x="10" y="19" fill="rgba(232, 230, 225, 0.68)" font-family="var(--font-mono)" font-size="11.5">
+									FLUX 1.0000
+								</text>
+								<text x="430" y="122" text-anchor="end" fill="rgba(232, 230, 225, 0.6)" font-family="var(--font-mono)" font-size="11.5">
+									PHASE (−{selectedPlanet.transitDurationHours}H → +{selectedPlanet.transitDurationHours}H)
+								</text>
+							</svg>
+						</div>
 					</div>
 				</div>
-
-				<svg
-					viewBox="0 0 440 128"
-					class="h-28 w-full overflow-visible border border-[rgba(232,230,225,0.12)] bg-[#050607]"
-					role="img"
-					aria-label="Transit Light Curve for {selectedPlanet.name}"
-				>
-					<defs>
-						<linearGradient id="transitFillGrad" x1="0" y1="0" x2="0" y2="1">
-							<stop offset="0%" stop-color="#C89B57" stop-opacity="0.22" />
-							<stop offset="100%" stop-color="#050607" stop-opacity="0.0" />
-						</linearGradient>
-					</defs>
-
-					<!-- Reference Flux = 1.0000 Line -->
-					<line
-						x1="0"
-						y1="26"
-						x2="440"
-						y2="26"
-						stroke="rgba(232, 230, 225, 0.16)"
-						stroke-dasharray="3 3"
-					/>
-					<!-- Ingress / Egress Markers -->
-					<line
-						x1={transitSvg.ingressX}
-						y1="14"
-						x2={transitSvg.ingressX}
-						y2="112"
-						stroke="rgba(232, 230, 225, 0.14)"
-						stroke-dasharray="2 3"
-					/>
-					<line
-						x1={transitSvg.egressX}
-						y1="14"
-						x2={transitSvg.egressX}
-						y2="112"
-						stroke="rgba(232, 230, 225, 0.14)"
-						stroke-dasharray="2 3"
-					/>
-
-					<path d={transitSvg.areaPath} fill="url(#transitFillGrad)" />
-					<path
-						d={transitSvg.linePath}
-						fill="none"
-						stroke="#E8E6E1"
-						stroke-width="1.75"
-						stroke-linecap="round"
-					/>
-
-					<!-- Mid-Transit Depth Annotation -->
-					<circle cx="220" cy={transitSvg.dipBottomY} r="3.5" fill="#C89B57" />
-					<text
-						x="220"
-						y={Math.min(120, transitSvg.dipBottomY + 15)}
-						text-anchor="middle"
-						fill="#C89B57"
-						font-family="var(--font-mono)"
-						font-size="9.5"
-					>
-						MID-TRANSIT −{selectedPlanet.baselineTransitDepthPpm.toLocaleString()} PPM
-					</text>
-					<text x="10" y="18" fill="rgba(232, 230, 225, 0.6)" font-family="var(--font-mono)" font-size="9">
-						FLUX 1.0000
-					</text>
-					<text x="430" y="120" text-anchor="end" fill="rgba(232, 230, 225, 0.44)" font-family="var(--font-mono)" font-size="9">
-						PHASE (−{selectedPlanet.transitDurationHours}H → +{selectedPlanet.transitDurationHours}H)
-					</text>
-				</svg>
-			</div>
+			{/if}
 		</div>
 
-		<!-- Right 5 Columns: Selected World Editorial Telemetry Table & Monochrome/Amber JWST Spectra -->
-		<div class="flex flex-col gap-6 xl:col-span-5">
+		<!-- Right 5 Columns (or Below Scene on Mobile when DATA panel is open): Selected World Editorial Telemetry Table & JWST Spectra -->
+		{#if dataPanelOpen}
+		<div data-testid="orrery-telemetry-panel" class="flex flex-col gap-6 xl:col-span-5">
 			<!-- Selected Planet Header & Key Physical Telemetry Hairline Table -->
 			<div class="border-t border-[rgba(232,230,225,0.18)] pt-4">
 				<div class="flex items-start justify-between gap-4">
@@ -2015,131 +1984,124 @@
 					</span>
 				</div>
 
-				<svg
-					viewBox="0 0 460 148"
-					class="h-36 w-full overflow-visible border border-[rgba(232,230,225,0.12)] bg-[#050607]"
-					role="img"
-					aria-label="JWST Atmospheric Transmission Spectrum for {selectedPlanet.name}"
-				>
-					<defs>
-						<linearGradient id="spectrumFillGrad" x1="0" y1="0" x2="0" y2="1">
-							<stop offset="0%" stop-color="#C89B57" stop-opacity="0.24" />
-							<stop offset="100%" stop-color="#050607" stop-opacity="0.02" />
-						</linearGradient>
-					</defs>
-
-					<!-- Horizontal Grid Lines -->
-					{#each [30, 62, 94, 122] as gy}
-						<line
-							x1="36"
-							y1={gy}
-							x2="444"
-							y2={gy}
-							stroke="rgba(232, 230, 225, 0.09)"
-							stroke-dasharray="2 3"
-						/>
-					{/each}
-
-					<!-- Y-Axis Labels -->
-					<text x="32" y="28" text-anchor="end" fill="rgba(232, 230, 225, 0.6)" font-family="var(--font-mono)" font-size="8.5">
-						{spectrumSvg.maxPpm}
-					</text>
-					<text x="32" y="124" text-anchor="end" fill="rgba(232, 230, 225, 0.6)" font-family="var(--font-mono)" font-size="8.5">
-						{spectrumSvg.minPpm}
-					</text>
-					<text
-						x="12"
-						y="76"
-						text-anchor="middle"
-						fill="rgba(232, 230, 225, 0.44)"
-						font-family="var(--font-mono)"
-						font-size="8"
-						transform="rotate(-90 12 76)"
-					>
-						(Rp/R*)² PPM
-					</text>
-
-					<!-- Continuous Model Spectrum Curve -->
-					<path d={spectrumSvg.areaPath} fill="url(#spectrumFillGrad)" />
-					<path
-						d={spectrumSvg.linePath}
-						fill="none"
-						stroke="#C89B57"
-						stroke-width="1.75"
-						stroke-linecap="round"
-					/>
-
-					<!-- Simulated Binned NIRSpec Data Points + 1σ Error Bars -->
-					{#each spectrumSvg.errorBars as eb}
-						<line
-							x1={eb.x}
-							y1={eb.y - eb.errPx}
-							x2={eb.x}
-							y2={eb.y + eb.errPx}
-							stroke="rgba(232, 230, 225, 0.36)"
-							stroke-width="1"
-						/>
-						<circle cx={eb.x} cy={eb.y} r="1.8" fill="#E8E6E1" />
-					{/each}
-
-					<!-- Molecular Absorption Peak Callouts (Monochrome + Warm Amber) -->
-					{#each spectrumSvg.markers as mk}
-						{@const isHovered = hoveredWavelengthUm === mk.wavelengthUm}
-						<g
-							class="cursor-pointer"
-							role="button"
-							tabindex="0"
-							onmouseenter={() => (hoveredWavelengthUm = mk.wavelengthUm)}
-							onmouseleave={() => (hoveredWavelengthUm = null)}
-							onfocus={() => (hoveredWavelengthUm = mk.wavelengthUm)}
-							onblur={() => (hoveredWavelengthUm = null)}
+				<div class="w-full overflow-x-auto pb-1">
+					<div class="min-w-[460px] w-full">
+						<svg
+							viewBox="0 0 460 156"
+							class="w-full h-auto overflow-visible border border-[rgba(232,230,225,0.12)] bg-[#050607]"
+							role="img"
+							aria-label="JWST Atmospheric Transmission Spectrum for {selectedPlanet.name}"
 						>
-							<line
-								x1={mk.x}
-								y1={mk.y}
-								x2={mk.x}
-								y2="122"
-								stroke={isHovered ? '#DDB474' : '#C89B57'}
-								stroke-width="1"
-								stroke-dasharray="2 2"
-								opacity="0.65"
-							/>
-							<circle
-								cx={mk.x}
-								cy={mk.y}
-								r={isHovered ? 5 : 3.5}
-								fill={isHovered ? '#DDB474' : '#C89B57'}
-								stroke="#050607"
-								stroke-width="1.5"
-							/>
-							<text
-								x={mk.x}
-								y={Math.max(14, mk.y - 7)}
-								text-anchor="middle"
-								fill="#E8E6E1"
-								font-family="var(--font-mono)"
-								font-size="9"
-							>
-								{mk.molecule} ({mk.wavelengthUm}μm)
+							<defs>
+								<linearGradient id="spectrumFillGrad" x1="0" y1="0" x2="0" y2="1">
+									<stop offset="0%" stop-color="#C89B57" stop-opacity="0.24" />
+									<stop offset="100%" stop-color="#050607" stop-opacity="0.02" />
+								</linearGradient>
+							</defs>
+
+							<!-- Horizontal Grid Lines -->
+							{#each [30, 62, 94, 122] as gy}
+								<line
+									x1="44"
+									y1={gy}
+									x2="444"
+									y2={gy}
+									stroke="rgba(232, 230, 225, 0.09)"
+									stroke-dasharray="2 3"
+								/>
+							{/each}
+
+							<!-- Y-Axis Labels -->
+							<text x="40" y="30" text-anchor="end" fill="rgba(232, 230, 225, 0.68)" font-family="var(--font-mono)" font-size="11.5">
+								{spectrumSvg.maxPpm}
 							</text>
-						</g>
-					{/each}
+							<text x="40" y="124" text-anchor="end" fill="rgba(232, 230, 225, 0.68)" font-family="var(--font-mono)" font-size="11.5">
+								{spectrumSvg.minPpm}
+							</text>
 
-					<!-- Wavelength X-Axis Ticks (0.6 to 5.3 um) -->
-					{#each [1.0, 2.0, 3.0, 4.0, 5.0] as wl}
-						{@const tx = 36 + ((wl - 0.6) / (5.3 - 0.6)) * (460 - 52)}
-						<text
-							x={tx}
-							y="140"
-							text-anchor="middle"
-							fill="rgba(232, 230, 225, 0.6)"
-							font-family="var(--font-mono)"
-							font-size="9"
-						>
-							{wl.toFixed(1)} μm
-						</text>
-					{/each}
-				</svg>
+							<!-- Continuous Model Spectrum Curve -->
+							<path d={spectrumSvg.areaPath} fill="url(#spectrumFillGrad)" />
+							<path
+								d={spectrumSvg.linePath}
+								fill="none"
+								stroke="#C89B57"
+								stroke-width="1.75"
+								stroke-linecap="round"
+							/>
+
+							<!-- Simulated Binned NIRSpec Data Points + 1σ Error Bars -->
+							{#each spectrumSvg.errorBars as eb}
+								<line
+									x1={eb.x}
+									y1={eb.y - eb.errPx}
+									x2={eb.x}
+									y2={eb.y + eb.errPx}
+									stroke="rgba(232, 230, 225, 0.36)"
+									stroke-width="1"
+								/>
+								<circle cx={eb.x} cy={eb.y} r="1.8" fill="#E8E6E1" />
+							{/each}
+
+							<!-- Molecular Absorption Peak Callouts (Monochrome + Warm Amber) -->
+							{#each spectrumSvg.markers as mk}
+								{@const isHovered = hoveredWavelengthUm === mk.wavelengthUm}
+								<g
+									class="cursor-pointer"
+									role="button"
+									tabindex="0"
+									onmouseenter={() => (hoveredWavelengthUm = mk.wavelengthUm)}
+									onmouseleave={() => (hoveredWavelengthUm = null)}
+									onfocus={() => (hoveredWavelengthUm = mk.wavelengthUm)}
+									onblur={() => (hoveredWavelengthUm = null)}
+								>
+									<line
+										x1={mk.x}
+										y1={mk.y}
+										x2={mk.x}
+										y2="122"
+										stroke={isHovered ? '#DDB474' : '#C89B57'}
+										stroke-width="1"
+										stroke-dasharray="2 2"
+										opacity="0.65"
+									/>
+									<circle
+										cx={mk.x}
+										cy={mk.y}
+										r={isHovered ? 5 : 3.5}
+										fill={isHovered ? '#DDB474' : '#C89B57'}
+										stroke="#050607"
+										stroke-width="1.5"
+									/>
+									<text
+										x={Math.min(415, Math.max(68, mk.x))}
+										y={Math.max(16, mk.y - 8)}
+										text-anchor="middle"
+										fill="#E8E6E1"
+										font-family="var(--font-mono)"
+										font-size="12"
+									>
+										{mk.molecule} ({mk.wavelengthUm}μm)
+									</text>
+								</g>
+							{/each}
+
+							<!-- Wavelength X-Axis Ticks (0.6 to 5.3 um) -->
+							{#each [1.0, 2.0, 3.0, 4.0, 5.0] as wl}
+								{@const tx = 36 + ((wl - 0.6) / (5.3 - 0.6)) * (460 - 52)}
+								<text
+									x={tx}
+									y="146"
+									text-anchor="middle"
+									fill="rgba(232, 230, 225, 0.68)"
+									font-family="var(--font-mono)"
+									font-size="11.5"
+								>
+									{wl.toFixed(1)} μm
+								</text>
+							{/each}
+						</svg>
+					</div>
+				</div>
 
 				<!-- Molecular Absorption Feature Hairline Table -->
 				<div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 divide-y divide-[rgba(232,230,225,0.09)] border-t border-[rgba(232,230,225,0.12)]">
@@ -2160,6 +2122,7 @@
 				</div>
 			</div>
 		</div>
+		{/if}
 	</div>
 	{/if}
 </section>

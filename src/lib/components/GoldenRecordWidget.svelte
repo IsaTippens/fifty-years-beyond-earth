@@ -902,11 +902,12 @@
 		<!-- LEFT: Interactive Gold-Plated Aluminum Cover SVG -->
 		<div class="lg:col-span-6 flex flex-col items-center">
 			<div
-				class="relative w-full max-w-[460px] border border-[#E8E6E1]/12 bg-[#050607] p-2.5 sm:p-4 flex items-center justify-center"
+				class="relative w-full max-w-[460px] overflow-x-auto border border-[#E8E6E1]/12 bg-[#050607] p-2.5 sm:p-4 flex items-center justify-center"
 			>
+				<div class="min-w-[420px] w-full">
 				<svg
 					viewBox="0 0 500 500"
-					class="w-full h-auto max-h-[220px] sm:max-h-[340px] select-none"
+					class="w-full h-auto select-none"
 					role="img"
 					aria-label="Interactive Voyager Golden Record Cover Diagram"
 				>
@@ -964,15 +965,14 @@
 					<!-- ============================================================ -->
 					<g transform="translate(86, 76)" stroke="#C89B57" fill="none" filter="url(#etchGlow)">
 						<text
-							x="0"
+							x="-18"
 							y="-14"
 							fill="#E8E6E1"
 							stroke="none"
 							font-family="monospace"
-							font-size="8.5"
-							letter-spacing="0.08em"
+							font-size="14.5"
 						>
-							I. STYLUS &amp; 16⅔ RPM ROTATION
+							I. STYLUS &amp; 16⅔ RPM
 						</text>
 						<!-- Record plan view -->
 						<circle cx="52" cy="52" r="42" stroke-width="1.5" />
@@ -1006,14 +1006,14 @@
 						<line x1="10" y1="114" x2="94" y2="114" stroke-width="2" />
 						<path d="M 82 104 L 90 104 L 86 113 Z" stroke-width="1.2" />
 						<text
-							x="12"
-							y="127"
+							x="-10"
+							y="132"
 							fill="#DDB474"
 							stroke="none"
 							font-family="monospace"
-							font-size="7.5"
+							font-size="13.5"
 						>
-							1000011000... (t = 59.5 min)
+							t = 59.5 min
 						</text>
 					</g>
 
@@ -1022,32 +1022,22 @@
 					<!-- ============================================================ -->
 					<g transform="translate(262, 74)" stroke="#C89B57" fill="none" filter="url(#etchGlow)">
 						<text
-							x="0"
+							x="-12"
 							y="-12"
 							fill="#E8E6E1"
 							stroke="none"
 							font-family="monospace"
-							font-size="8.5"
-							letter-spacing="0.08em"
+							font-size="14.5"
 						>
-							II. VIDEO SCAN &amp; CIRCLE FRAME
+							II. VIDEO SCAN
 						</text>
 						<!-- Analog video waveform scanlines 1, 2, 3 -->
 						<polyline
 							points="0,20 8,20 8,32 14,32 14,12 22,22 30,10 38,24 46,16 54,20 62,20 62,32 68,32 68,14 78,24 88,12 96,20 104,20 104,32 110,32 110,16 122,20"
 							stroke-width="1.3"
 						/>
-						<text x="6" y="8" fill="#DDB474" stroke="none" font-family="monospace" font-size="7">
-							1
-						</text>
-						<text x="60" y="8" fill="#DDB474" stroke="none" font-family="monospace" font-size="7">
-							10
-						</text>
-						<text x="102" y="8" fill="#DDB474" stroke="none" font-family="monospace" font-size="7">
-							11
-						</text>
-						<text x="18" y="43" fill="#DDB474" stroke="none" font-family="monospace" font-size="7">
-							LINE SCAN = 8.0 ms
+						<text x="0" y="48" fill="#DDB474" stroke="none" font-family="monospace" font-size="13.5">
+							SCAN = 8.0 ms
 						</text>
 
 						<!-- Vertical Raster Grid & Calibration Circle (#1 Image) -->
@@ -1075,59 +1065,49 @@
 								{/if}
 							{/each}
 							<text
-								x="0"
-								y="66"
+								x="-10"
+								y="72"
 								fill="#DDB474"
 								stroke="none"
 								font-family="monospace"
-								font-size="7"
+								font-size="13.5"
 							>
-								512 LINES (1000000000₂)
+								512 LINES · CIRCLE
 							</text>
 
 							<!-- First Reconstructed Frame: Circle -->
 							<rect x="64" y="2" width="56" height="52" stroke-width="1.3" />
 							<circle cx="92" cy="28" r="18" stroke-width="1.4" />
-							<text
-								x="64"
-								y="66"
-								fill="#DDB474"
-								stroke="none"
-								font-family="monospace"
-								font-size="7"
-							>
-								FRAME #1: CIRCLE
-							</text>
 						</g>
 					</g>
 
 					<!-- ============================================================ -->
 					<!-- 3. ELECTROPLATED URANIUM-238 RADIOMETRIC CLOCK SPOT          -->
 					<!-- ============================================================ -->
-					<g transform="translate(86, 214)">
+					<g transform="translate(68, 214)">
 						<rect
 							x="0"
 							y="0"
-							width="118"
-							height="24"
+							width="162"
+							height="38"
 							rx="2"
 							fill="#171105"
 							stroke="#C89B57"
 							stroke-width="1.1"
 						/>
-						<circle cx="14" cy="12" r="5.5" fill="#C89B57" />
-						<circle cx="14" cy="12" r="2.2" fill="#171105" />
+						<circle cx="14" cy="19" r="5.5" fill="#C89B57" />
+						<circle cx="14" cy="19" r="2.2" fill="#171105" />
 						<text
 							x="26"
-							y="10"
+							y="16"
 							fill="#E8E6E1"
 							font-family="monospace"
-							font-size="7.2"
+							font-size="13.5"
 						>
-							²³⁸U ISOTOPE CLOCK
+							²³⁸U CLOCK
 						</text>
-						<text x="26" y="19" fill="#C89B57" font-family="monospace" font-size="6.5">
-							t½ = 4.468 Gyr
+						<text x="26" y="32" fill="#C89B57" font-family="monospace" font-size="13.2">
+							t½ = 4.47 Gyr
 						</text>
 					</g>
 
@@ -1136,14 +1116,13 @@
 					<!-- ============================================================ -->
 					<g transform="translate(178, 344)">
 						<text
-							x="-105"
-							y="-86"
+							x="-110"
+							y="-76"
 							fill="#E8E6E1"
 							font-family="monospace"
-							font-size="8.5"
-							letter-spacing="0.08em"
+							font-size="14.5"
 						>
-							III. 14-PULSAR SOLAR LOCATION MAP (CLICK RAY)
+							III. 14-PULSAR MAP
 						</text>
 
 						<!-- 15th Reference Axis (Solar System / Earth vector) -->
@@ -1225,15 +1204,14 @@
 					<!-- ============================================================ -->
 					<g transform="translate(310, 358)" stroke="#C89B57" fill="none" filter="url(#etchGlow)">
 						<text
-							x="-18"
-							y="-36"
+							x="-32"
+							y="-32"
 							fill="#E8E6E1"
 							stroke="none"
 							font-family="monospace"
-							font-size="8.5"
-							letter-spacing="0.08em"
+							font-size="14.5"
 						>
-							IV. ¹H HYPERFINE TRANSITION
+							IV. ¹H SPIN-FLIP
 						</text>
 
 						<!-- Left H atom: anti-parallel spins (lower energy state) -->
@@ -1261,17 +1239,18 @@
 						<circle cx="124" cy="9" r="1.8" fill="#C89B57" />
 
 						<text
-							x="-6"
-							y="66"
+							x="-32"
+							y="68"
 							fill="#DDB474"
 							stroke="none"
 							font-family="monospace"
-							font-size="7.5"
+							font-size="13.5"
 						>
-							ν = 1420.405 MHz | t₀ = 0.704 ns | λ = 21.1 cm
+							1420 MHz · 21 cm
 						</text>
 					</g>
 				</svg>
+				</div>
 			</div>
 
 			<!-- Selected Pulsar Ray Telemetry Readout -->
@@ -1288,7 +1267,7 @@
 						</span>
 						{#if selectedPulsar.commonName}
 							<span
-								class="border border-[#C89B57]/30 px-2 py-0.5 font-mono-tech text-[10px] text-[#C89B57]"
+								class="border border-[#C89B57]/30 px-2 py-0.5 font-mono-tech text-[11px] text-[#C89B57]"
 							>
 								{selectedPulsar.commonName}
 							</span>
@@ -1301,18 +1280,18 @@
 
 				<div class="mt-2.5 grid grid-cols-2 gap-3 text-xs border-t border-[#E8E6E1]/10 pt-2.5">
 					<div>
-						<div class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#E8E6E1]/50">
+						<div class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/50">
 							ROTATION PERIOD &amp; ¹H UNITS
 						</div>
 						<div class="mt-0.5 font-mono-tech text-sm text-[#C89B57]">
 							{selectedPulsar.periodSec.toFixed(7)} s
 						</div>
-						<div class="mt-0.5 font-mono-tech text-[10px] text-[#E8E6E1]/50">
+						<div class="mt-0.5 font-mono-tech text-[11px] text-[#E8E6E1]/50">
 							{selectedPulsar.hyperfineCount} × 0.704 ns spin-flips
 						</div>
 					</div>
 					<div>
-						<div class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#E8E6E1]/50">
+						<div class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/50">
 							ETCHED BINARY VECTOR ENCODING
 						</div>
 						<div
@@ -1346,7 +1325,7 @@
 							<button
 								type="button"
 								onclick={() => switchMode(tab.id as SynthMode)}
-								class="border px-2.5 py-1 font-mono-tech text-[10px] uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {activeMode ===
+								class="border px-2.5 py-1 font-mono-tech text-xs uppercase tracking-[0.14em] transition-colors duration-500 cursor-pointer {activeMode ===
 								tab.id
 									? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
 									: 'border-[#E8E6E1]/12 bg-transparent text-[#E8E6E1]/55 hover:text-[#E8E6E1]'}"
@@ -1366,7 +1345,7 @@
 
 				<!-- Analog Video Slide Selector -->
 				<div class="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-					<span class="font-mono-tech text-[10px] uppercase tracking-[0.16em] text-[#E8E6E1]/55">DECODED VIDEO SLIDE:</span>
+					<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/55">DECODED VIDEO SLIDE:</span>
 					<div class="flex flex-wrap gap-1.5">
 						{#each [
 							{ id: 'circle', label: '#1 Calibration Circle' },
@@ -1380,7 +1359,7 @@
 									selectedVideoSlide = slide.id as VideoImageId;
 									scanlineProgress = 40;
 								}}
-								class="border px-2 py-0.5 font-mono-tech text-[10px] uppercase tracking-[0.12em] transition-colors duration-500 cursor-pointer {selectedVideoSlide ===
+								class="border px-2 py-0.5 font-mono-tech text-[11px] uppercase tracking-[0.12em] transition-colors duration-500 cursor-pointer {selectedVideoSlide ===
 								slide.id
 									? 'border-[#C89B57] bg-[#C89B57]/15 text-[#E8E6E1]'
 									: 'border-[#E8E6E1]/12 bg-transparent text-[#E8E6E1]/55 hover:text-[#E8E6E1]'}"
@@ -1398,7 +1377,7 @@
 					<h5 class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57]">
 						VERIFIED GREETINGS IN 55 LANGUAGES (SIDE 1, TRACK 1)
 					</h5>
-					<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#E8E6E1]/44">
+					<span class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/44">
 						SELECT CADENCE
 					</span>
 				</div>
@@ -1445,7 +1424,7 @@
 					<h5 class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/80">
 						90-MINUTE MUSICAL ARCHIVE OF EARTH
 					</h5>
-					<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#E8E6E1]/44">27 MASTERWORKS</span>
+					<span class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#E8E6E1]/44">27 MASTERWORKS</span>
 				</div>
 
 				<div class="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -1464,7 +1443,7 @@
 							<div class="font-mono-tech text-[11px] leading-snug">
 								{track.composerOrArtist.split('(')[0].trim()}
 							</div>
-							<div class="mt-0.5 text-[10px] leading-snug text-[#E8E6E1]/58">{track.title}</div>
+							<div class="mt-0.5 text-[11px] leading-snug text-[#E8E6E1]/58">{track.title}</div>
 						</button>
 					{/each}
 				</div>

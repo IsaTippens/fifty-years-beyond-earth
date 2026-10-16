@@ -74,7 +74,7 @@
 						class="group flex flex-col justify-between border border-[#E8E6E1]/12 bg-[#08090B]/80 hover:border-[#C89B57]/70 hover:bg-[#E8E6E1]/[0.02] p-5 transition-colors duration-300"
 					>
 						<div>
-							<div class="flex items-center justify-between gap-2 font-mono-tech text-[10px] uppercase tracking-[0.16em]">
+							<div class="flex items-center justify-between gap-2 font-mono-tech text-xs uppercase tracking-[0.14em]">
 								<span class="text-[#E8E6E1]/55 group-hover:text-[#C89B57] transition-colors">
 									{ch.indexNumber} · {ch.chapterNumber}
 								</span>
@@ -88,7 +88,7 @@
 							</p>
 						</div>
 
-						<div class="mt-5 pt-3 border-t border-[#E8E6E1]/10 flex items-center justify-between gap-2 font-mono-tech text-[10px] uppercase tracking-[0.14em]">
+						<div class="mt-5 pt-3 border-t border-[#E8E6E1]/10 flex items-center justify-between gap-2 font-mono-tech text-[11px] uppercase tracking-[0.14em]">
 							<span class="text-[#E8E6E1]/50">{ch.milestoneCount} MILESTONES · {ch.killerStat.value}</span>
 							<span class="text-[#C89B57] group-hover:translate-x-0.5 transition-transform">
 								ENTER ↗
@@ -104,7 +104,7 @@
 					class="group flex flex-col justify-between border border-[#C89B57]/35 bg-[#08090B] hover:border-[#C89B57] hover:bg-[#C89B57]/[0.04] p-5 transition-colors duration-300"
 				>
 					<div>
-						<div class="flex items-center justify-between gap-2 font-mono-tech text-[10px] uppercase tracking-[0.16em]">
+						<div class="flex items-center justify-between gap-2 font-mono-tech text-xs uppercase tracking-[0.14em]">
 							<span class="text-[#C89B57]">08 · COLOPHON</span>
 							<span class="text-[#E8E6E1]/55">VERIFICATION LEDGER</span>
 						</div>
@@ -116,7 +116,7 @@
 						</p>
 					</div>
 
-					<div class="mt-5 pt-3 border-t border-[#E8E6E1]/10 flex items-center justify-between gap-2 font-mono-tech text-[10px] uppercase tracking-[0.14em]">
+					<div class="mt-5 pt-3 border-t border-[#E8E6E1]/10 flex items-center justify-between gap-2 font-mono-tech text-[11px] uppercase tracking-[0.14em]">
 						<span class="text-[#E8E6E1]/55">72+ SOURCES · 27 ASSETS</span>
 						<span class="text-[#C89B57] group-hover:translate-x-0.5 transition-transform">
 							OPEN COLOPHON ↗

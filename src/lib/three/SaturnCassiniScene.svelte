@@ -181,9 +181,12 @@
 	let isPointerDragging = $state(false);
 	let isAutoDrifting = $state(true);
 	let showTrajectoryOverlay = $state(true);
-	let mobileLiteMode = $state(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+	let mobileLiteMode = $state(false);
+	let isMobileViewport = $state(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+	let dataPanelOpen = $state(typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
+	let orbitAzimuthDeg = $state(Math.round((CAMERA_PRESETS[0].orbitAzimuthTheta * 180) / Math.PI));
+	let orbitPolarDeg = $state(Math.round((CAMERA_PRESETS[0].orbitPolarPhi * 180) / Math.PI));
 	let cleanupSaturnWebGL: (() => void) | null = null;
-
 	let activePreset = $derived(CAMERA_PRESETS[activePresetIndex]);
 	let effectiveSampleRadiusKm = $derived(hoveredRadiusKm ?? selectedRadiusKm);
 	let ringTelemetry: RingSampleTelemetry = $derived(
@@ -935,6 +938,8 @@
 
 				orbitState.theta -= dx * 0.0065;
 				orbitState.phi = Math.max(0.18, Math.min(Math.PI - 0.18, orbitState.phi - dy * 0.0055));
+				orbitAzimuthDeg = Math.round((orbitState.theta * 180) / Math.PI);
+				orbitPolarDeg = Math.round((orbitState.phi * 180) / Math.PI);
 				pauseAutoDriftTemporarily();
 				return;
 			}
@@ -986,8 +991,8 @@
 		// =========================================================================
 		function updateViewportSize() {
 			if (!containerEl) return;
-			const w = Math.max(containerEl.clientWidth, 300);
-			const h = Math.max(containerEl.clientHeight, 420);
+			const w = Math.max(containerEl.clientWidth, 280);
+			const h = Math.max(containerEl.clientHeight, 320);
 			camera.aspect = w / h;
 			camera.updateProjectionMatrix();
 			renderer.setSize(w, h, false);
@@ -1036,8 +1041,8 @@
 			// Subtle automatic orbital drift when idle
 			if (isAutoDrifting && !isPointerDragging) {
 				orbitState.theta += dt * 0.032;
+				orbitAzimuthDeg = Math.round((orbitState.theta * 180) / Math.PI);
 			}
-
 			// 1. Update Saturn System Tilt (Ring Inclination)
 			const tiltRad = THREE.MathUtils.degToRad(orbitState.ringTilt);
 			saturnSystemGroup.rotation.set(tiltRad, 0, tiltRad * 0.22);
@@ -1217,13 +1222,20 @@
 	};
 
 	onMount(() => {
-		if (window.innerWidth < 768) {
-			mobileLiteMode = true;
-		} else {
-			cleanupSaturnWebGL = mountSaturnWebGL() ?? null;
-		}
+		const syncViewportMode = () => {
+			const mobile = window.innerWidth < 768;
+			if (mobile !== isMobileViewport) {
+				isMobileViewport = mobile;
+				dataPanelOpen = !mobile;
+			}
+		};
+		isMobileViewport = window.innerWidth < 768;
+		dataPanelOpen = !isMobileViewport;
+		window.addEventListener('resize', syncViewportMode, { passive: true });
+		cleanupSaturnWebGL = mountSaturnWebGL() ?? null;
 
 		return () => {
+			window.removeEventListener('resize', syncViewportMode);
 			if (cleanupSaturnWebGL) {
 				cleanupSaturnWebGL();
 				cleanupSaturnWebGL = null;
@@ -1234,364 +1246,329 @@
 
 <section
 	aria-label="Interactive 3D Set Piece: Saturn's Rings as Cassini-Huygens Arrives"
+	data-testid="saturn-scene-section"
 	class="relative my-6 md:my-10 overflow-hidden border-y border-[rgba(232,230,225,0.12)] bg-[#050607]"
 >
 	{#if mobileLiteMode}
-		<!-- Lightweight Mobile Documentary Plate (~420px total height) -->
-		<div class="flex flex-col bg-[#050607]" data-testid="saturn-mobile-lite">
-			<!-- Compact Top Bar with On-Demand 3D WebGL Toggle -->
-			<div class="flex items-center justify-between gap-2 border-b border-[rgba(232,230,225,0.12)] px-4 py-2.5">
-				<span class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57]">
-					SET PIECE 01 · CASSINI–HUYGENS
+		<!-- Fallback Plate if WebGL Context Unavailable -->
+		<div class="flex flex-col bg-[#050607] p-4" data-testid="saturn-mobile-lite">
+			<div class="font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C89B57]">
+				SET PIECE 01 · CASSINI–HUYGENS ({activePreset.title})
+			</div>
+			<p class="mt-2 font-sans text-base text-[#E8E6E1]/80">{activePreset.caption}</p>
+		</div>
+	{:else}
+		<!-- Top Mission Telemetry Hairline Bar -->
+		<div
+			class="relative z-20 flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(232,230,225,0.12)] bg-[#050607] px-4 py-3 sm:px-6"
+		>
+			<div class="flex flex-wrap items-center gap-3 sm:gap-4">
+				<span class="font-mono-tech text-xs uppercase tracking-[0.16em] text-[#C89B57]">
+					SET PIECE 01 · CASSINI–HUYGENS AT SATURN
+				</span>
+				<span class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
+					EPOCH <strong class="font-normal text-[#E8E6E1]">{activePreset.epoch}</strong>
+				</span>
+			</div>
+
+			<div class="flex flex-wrap items-center gap-4 sm:gap-6 font-mono-tech text-[11px] uppercase tracking-[0.14em]">
+				<div class="flex items-center gap-1.5">
+					<span class="text-[rgba(232,230,225,0.6)]">EARTH DIST</span>
+					<span class="text-xs text-[#C89B57]">{activePreset.earthDistanceAu.toFixed(2)} AU</span>
+				</div>
+				<div class="flex items-center gap-1.5">
+					<span class="text-[rgba(232,230,225,0.6)]">OWLT</span>
+					<span class="text-xs text-[#E8E6E1]">{activePreset.oneWayLightTime}</span>
+				</div>
+				<div class="flex items-center gap-1.5">
+					<span class="text-[rgba(232,230,225,0.6)]">VEL</span>
+					<span class="text-xs text-[#C89B57]">{activePreset.cassiniVelocityKmS.toFixed(2)} KM/S</span>
+				</div>
+			</div>
+		</div>
+
+		<!-- Main Responsive 3D WebGL Viewport Container -->
+		<div
+			bind:this={containerEl}
+			data-testid="saturn-canvas-container"
+			class="relative h-[370px] sm:h-[520px] lg:h-[600px] w-full select-none overflow-hidden"
+		>
+			<canvas
+				bind:this={canvasEl}
+				data-testid="saturn-webgl-canvas"
+				data-orbit-azimuth={orbitAzimuthDeg}
+				data-orbit-polar={orbitPolarDeg}
+				class="block h-full w-full touch-none cursor-grab active:cursor-grabbing"
+			></canvas>
+
+			<!-- Top-Right Persistent DATA − / DATA + Toggle Chip (Always Visible in Margin) -->
+			<div class="pointer-events-none absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-2">
+				<span class="hidden sm:inline-block border border-[rgba(232,230,225,0.14)] bg-[rgba(5,6,7,0.82)] px-2.5 py-1.5 font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.7)] backdrop-blur-sm">
+					DRAG TO ORBIT · {ringTelemetry.saturnRadii.toFixed(2)} Rₛ
 				</span>
 				<button
 					type="button"
-					onclick={enableInteractiveWebGL}
-					class="shrink-0 cursor-pointer border border-[#C89B57]/50 bg-[rgba(200,155,87,0.10)] px-2.5 py-1 font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#C89B57] hover:bg-[rgba(200,155,87,0.20)] transition-colors"
+					data-testid="saturn-data-toggle"
+					aria-expanded={dataPanelOpen}
+					onclick={() => (dataPanelOpen = !dataPanelOpen)}
+					class="pointer-events-auto cursor-pointer border border-[#C89B57]/75 bg-[rgba(5,6,7,0.9)] px-3 py-1.5 font-mono-tech text-xs font-medium uppercase tracking-[0.16em] text-[#C89B57] backdrop-blur-sm transition-colors hover:border-[#DDB474] hover:bg-[rgba(200,155,87,0.15)] hover:text-[#DDB474]"
 				>
-					[Enable Interactive 3D WebGL]
+					{dataPanelOpen ? 'DATA −' : 'DATA +'}
 				</button>
 			</div>
 
-			<!-- Archival Photograph Backdrop with Slow Ken Burns Drift + Active Preset Copy -->
-			<div class="relative min-h-[215px] overflow-hidden px-4 py-4 flex flex-col justify-end">
-				<img
-					src="/assets/chapters/cassini-saturn-eclipse-800.webp"
-					alt="Cassini wide-angle mosaic of Saturn eclipsing the Sun, illuminating the E, F, G, and main ring system"
-					loading="lazy"
-					decoding="async"
-					class="saturn-ken-burns pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-80"
-					style="filter: saturate(1.05) contrast(1.22) brightness(1.12);"
-				/>
+			<!-- DESKTOP ONLY Margin Overlays (Clear of Center Focal Point; pointer-events: none on decorative containers) -->
+			{#if !isMobileViewport && dataPanelOpen}
+				<!-- Top-Left Margin: Compact Active Preset Editorial Callout -->
 				<div
-					class="pointer-events-none absolute inset-0"
-					style="background: linear-gradient(180deg, rgba(5,6,7,0.18) 0%, rgba(5,6,7,0.62) 58%, rgba(5,6,7,0.92) 100%);"
-				></div>
-
-				<div class="relative z-10">
-					<div class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C89B57]">
-						{activePreset.indexLabel} · {activePreset.epoch}
+					data-testid="saturn-desktop-caption-overlay"
+					class="pointer-events-none absolute top-4 left-4 z-10 max-w-xs border-l border-[rgba(232,230,225,0.22)] bg-[rgba(5,6,7,0.78)] pl-3.5 pr-3.5 py-2.5 backdrop-blur-sm"
+				>
+					<div class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#C89B57]">
+						{activePreset.missionPhase}
 					</div>
-					<h3 class="mt-1 font-display text-xl font-normal tracking-[-0.02em] text-[#E8E6E1] leading-[1.12]">
+					<h3 class="mt-1 font-display text-lg font-normal tracking-[-0.02em] text-[#E8E6E1] leading-[1.12]">
 						{activePreset.title}
 					</h3>
-					<p class="mt-1.5 font-sans text-base leading-[1.5] text-[rgba(232,230,225,0.84)]">
+					<p class="mt-1.5 font-sans text-xs leading-[1.55] text-[rgba(232,230,225,0.76)]">
 						{activePreset.caption}
 					</p>
 				</div>
-			</div>
 
-			<!-- Compact 2x2 Telemetry Grid -->
-			<div class="grid grid-cols-2 border-t border-[rgba(232,230,225,0.12)] divide-x divide-y divide-[rgba(232,230,225,0.10)] font-mono-tech text-[11px] uppercase tracking-[0.12em]">
-				<div class="px-3.5 py-2">
-					<span class="text-[10px] text-[rgba(232,230,225,0.55)]">EARTH DIST</span>
-					<div class="text-xs text-[#C89B57]">{activePreset.earthDistanceAu.toFixed(2)} AU</div>
-				</div>
-				<div class="px-3.5 py-2">
-					<span class="text-[10px] text-[rgba(232,230,225,0.55)]">ONE-WAY LIGHT</span>
-					<div class="text-xs text-[#E8E6E1]">{activePreset.oneWayLightTime}</div>
-				</div>
-				<div class="px-3.5 py-2">
-					<span class="text-[10px] text-[rgba(232,230,225,0.55)]">CASSINI VEL</span>
-					<div class="text-xs text-[#C89B57]">{activePreset.cassiniVelocityKmS.toFixed(2)} KM/S</div>
-				</div>
-				<div class="px-3.5 py-2">
-					<span class="text-[10px] text-[rgba(232,230,225,0.55)]">OPTICAL DEPTH τ</span>
-					<div class="text-xs text-[#E8E6E1]">{ringTelemetry.opticalDepthTau.toFixed(2)} ({ringTelemetry.saturnRadii.toFixed(2)} Rₛ)</div>
-				</div>
-			</div>
+				<!-- Top-Right Margin (Below Toggle Chip): Compact Ring Radial Telemetry -->
+				<div
+					data-testid="saturn-desktop-telemetry-overlay"
+					class="pointer-events-none absolute top-14 right-4 z-10 w-72 border border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.82)] p-3.5 backdrop-blur-sm"
+				>
+					<div class="flex items-center justify-between border-b border-[rgba(232,230,225,0.12)] pb-1.5">
+						<span class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.65)]">
+							{hoveredRadiusKm !== null ? 'CURSOR RING PROBE' : 'RING RADIAL TELEMETRY'}
+						</span>
+						<span class="font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C89B57]">
+							{ringTelemetry.saturnRadii.toFixed(2)} Rₛ
+						</span>
+					</div>
 
-			<!-- Compact Preset Selector Tabs -->
-			<div class="grid grid-cols-5 divide-x divide-[rgba(232,230,225,0.12)] border-t border-[rgba(232,230,225,0.12)]">
-				{#each CAMERA_PRESETS as preset, idx (preset.id)}
-					{@const isActive = activePresetIndex === idx}
-					<button
-						type="button"
-						onclick={() => applyPreset(idx)}
-						class="cursor-pointer px-2 py-2 text-left transition-colors {isActive
-							? 'bg-[rgba(200,155,87,0.14)] text-[#E8E6E1]'
-							: 'text-[rgba(232,230,225,0.68)] hover:bg-[rgba(232,230,225,0.04)]'}"
-					>
-						<div class="font-mono-tech text-[10px] uppercase tracking-[0.12em] {isActive ? 'text-[#C89B57]' : 'text-[rgba(232,230,225,0.55)]'}">
+					<div class="mt-2">
+						<div class="font-display text-sm font-normal text-[#E8E6E1] leading-snug">
+							{ringTelemetry.regionName}
+						</div>
+						<p class="mt-1 font-sans text-xs leading-[1.5] text-[rgba(232,230,225,0.72)]">
+							{ringTelemetry.description}
+						</p>
+					</div>
+
+					<div class="mt-2.5 grid grid-cols-3 gap-2 border-y border-[rgba(232,230,225,0.12)] py-2 font-mono-tech">
+						<div>
+							<div class="text-[11px] uppercase tracking-[0.12em] text-[rgba(232,230,225,0.6)]">RADIUS</div>
+							<div class="mt-0.5 text-xs text-[#E8E6E1]">
+								{ringTelemetry.radiusKm.toLocaleString()} km
+							</div>
+						</div>
+						<div>
+							<div class="text-[11px] uppercase tracking-[0.12em] text-[rgba(232,230,225,0.6)]">OPTICAL τ</div>
+							<div class="mt-0.5 text-xs text-[#C89B57]">
+								{ringTelemetry.opticalDepthTau.toFixed(3)}
+							</div>
+						</div>
+						<div>
+							<div class="text-[11px] uppercase tracking-[0.12em] text-[rgba(232,230,225,0.6)]">KEPLER</div>
+							<div class="mt-0.5 text-xs text-[#E8E6E1]">
+								{ringTelemetry.orbitalVelocityKmS} km/s
+							</div>
+						</div>
+					</div>
+
+					<!-- Interactive Ring Zone Quick-Stops (Only actual buttons take pointer-events) -->
+					<div class="pointer-events-auto mt-2.5 flex flex-wrap gap-x-2.5 gap-y-1">
+						{#each RING_ZONE_QUICK_STOPS as zone (zone.label)}
+							{@const isZoneActive = Math.abs(effectiveSampleRadiusKm - zone.km) < 1600}
+							<button
+								type="button"
+								onclick={() => (selectedRadiusKm = zone.km)}
+								class="cursor-pointer border-b pb-0.5 font-mono-tech text-xs uppercase tracking-[0.12em] transition-colors duration-300 {isZoneActive
+									? 'border-[#C89B57] text-[#C89B57]'
+									: 'border-transparent text-[rgba(232,230,225,0.65)] hover:text-[#E8E6E1]'}"
+							>
+								{zone.label}
+							</button>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Preset Selector Strip (Directly Below 3D Scene so Canvas Bottom Is Never Blocked) -->
+		<div
+			class="relative z-20 grid grid-cols-2 sm:grid-cols-5 border-t border-[rgba(232,230,225,0.12)] bg-[#08090B] divide-y sm:divide-y-0 sm:divide-x divide-[rgba(232,230,225,0.12)]"
+		>
+			{#each CAMERA_PRESETS as preset, idx (preset.id)}
+				{@const isActive = activePresetIndex === idx}
+				<button
+					type="button"
+					onclick={() => applyPreset(idx)}
+					class="group cursor-pointer px-3.5 py-2.5 text-left transition-colors duration-300 {isActive
+						? 'bg-[rgba(200,155,87,0.12)]'
+						: 'hover:bg-[rgba(232,230,225,0.04)]'}"
+				>
+					<div class="flex items-center justify-between font-mono-tech text-[11px] uppercase tracking-[0.14em]">
+						<span class={isActive ? 'text-[#C89B57]' : 'text-[rgba(232,230,225,0.6)] group-hover:text-[#E8E6E1]'}>
 							{preset.indexLabel}
-						</div>
-						<div class="mt-0.5 font-sans text-[11px] leading-snug font-medium">
-							{preset.shortLabel.split(' ')[0]}
-						</div>
-					</button>
-				{/each}
-			</div>
-		</div>
-	{:else}
-	<!-- Top Mission Telemetry Hairline Bar -->
-	<div
-		class="relative z-20 flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(232,230,225,0.12)] bg-[#050607] px-4 py-3.5 sm:px-6"
-	>
-		<div class="flex flex-wrap items-center gap-4">
-			<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57]">
-				SET PIECE 01 · CASSINI–HUYGENS AT SATURN
-			</span>
-			<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
-				EPOCH <strong class="font-normal text-[#E8E6E1]">{activePreset.epoch}</strong>
-			</span>
-		</div>
-
-		<div class="flex flex-wrap items-center gap-6 font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-			<div class="flex items-center gap-2">
-				<span class="text-[rgba(232,230,225,0.6)]">EARTH DIST</span>
-				<span class="text-[#C89B57]">{activePreset.earthDistanceAu.toFixed(2)} AU</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<span class="text-[rgba(232,230,225,0.6)]">ONE-WAY LIGHT</span>
-				<span class="text-[#E8E6E1]">{activePreset.oneWayLightTime}</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<span class="text-[rgba(232,230,225,0.6)]">CASSINI VEL</span>
-				<span class="text-[#C89B57]">{activePreset.cassiniVelocityKmS.toFixed(2)} KM/S</span>
-			</div>
-		</div>
-	</div>
-
-	<!-- Main Responsive 3D WebGL Viewport Container -->
-	<div
-		bind:this={containerEl}
-		class="relative h-[520px] w-full select-none overflow-hidden lg:h-[620px]"
-	>
-		<canvas
-			bind:this={canvasEl}
-			class="block h-full w-full cursor-grab active:cursor-grabbing"
-		></canvas>
-
-		<!-- Upper-Left Active Preset Editorial Caption -->
-		<div
-			class="pointer-events-none absolute top-4 left-4 right-4 sm:right-auto z-10 sm:max-w-lg border-l border-[rgba(232,230,225,0.18)] bg-[rgba(5,6,7,0.78)] pl-4 pr-4 py-3 backdrop-blur-sm sm:top-6 sm:left-6"
-		>
-			<div class="mb-1 flex items-center justify-between gap-3">
-				<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57]">
-					{activePreset.missionPhase}
-				</span>
-				<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)] shrink-0">
-					DRAG TO ORBIT
-				</span>
-			</div>
-			<h3 class="font-display text-lg font-normal tracking-[-0.02em] text-[#E8E6E1] sm:text-2xl leading-[1.08]">
-				{activePreset.title}
-			</h3>
-			<p class="mt-2 hidden sm:block font-sans text-base leading-[1.65] text-[rgba(232,230,225,0.72)] max-w-[65ch]">
-				{activePreset.caption}
-			</p>
-		</div>
-
-		<!-- Upper-Right Live Radial Optical Depth & Scattering Telemetry Overlay -->
-		<div
-			class="pointer-events-auto absolute top-4 right-4 z-10 hidden w-80 border border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.82)] p-4 backdrop-blur-sm md:block sm:top-6 sm:right-6"
-		>
-			<div class="flex items-center justify-between border-b border-[rgba(232,230,225,0.12)] pb-2">
-				<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
-					{hoveredRadiusKm !== null ? 'CURSOR RING PROBE' : 'RING RADIAL TELEMETRY'}
-				</span>
-				<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C89B57]">
-					{ringTelemetry.saturnRadii.toFixed(2)} Rₛ
-				</span>
-			</div>
-
-			<div class="mt-3">
-				<div class="font-display text-base font-normal text-[#E8E6E1] leading-snug">
-					{ringTelemetry.regionName}
-				</div>
-				<p class="mt-1 font-sans text-base leading-[1.6] text-[rgba(232,230,225,0.72)]">
-					{ringTelemetry.description}
-				</p>
-			</div>
-			<div class="mt-3.5 grid grid-cols-3 gap-2 border-y border-[rgba(232,230,225,0.12)] py-2.5 font-mono-tech">
-				<div>
-					<div class="text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">RADIUS</div>
-					<div class="mt-0.5 text-xs text-[#E8E6E1]">
-						{ringTelemetry.radiusKm.toLocaleString()} km
+						</span>
+						{#if isActive}
+							<span class="h-1.5 w-1.5 rounded-full bg-[#C89B57]"></span>
+						{/if}
 					</div>
-				</div>
-				<div>
-					<div class="text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">OPTICAL τ</div>
-					<div class="mt-0.5 text-xs text-[#C89B57]">
-						{ringTelemetry.opticalDepthTau.toFixed(3)}
-					</div>
-				</div>
-				<div>
-					<div class="text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">KEPLER</div>
-					<div class="mt-0.5 text-xs text-[#E8E6E1]">
-						{ringTelemetry.orbitalVelocityKmS} km/s
-					</div>
-				</div>
-			</div>
-
-			<!-- Ring Zone Index Links -->
-			<div class="mt-3 flex flex-wrap gap-x-3 gap-y-1.5">
-				{#each RING_ZONE_QUICK_STOPS as zone (zone.label)}
-					{@const isZoneActive = Math.abs(effectiveSampleRadiusKm - zone.km) < 1600}
-					<button
-						type="button"
-						onclick={() => (selectedRadiusKm = zone.km)}
-						class="cursor-pointer border-b pb-0.5 font-mono-tech text-[11px] uppercase tracking-[0.16em] transition-colors duration-500 {isZoneActive
-							? 'border-[#C89B57] text-[#C89B57]'
-							: 'border-transparent text-[rgba(232,230,225,0.6)] hover:text-[#E8E6E1]'}"
+					<div
+						class="mt-0.5 font-display text-sm font-normal leading-snug {isActive
+							? 'text-[#E8E6E1]'
+							: 'text-[rgba(232,230,225,0.75)]'}"
 					>
-						{zone.label}
-					</button>
-				{/each}
-			</div>
+						{preset.shortLabel}
+					</div>
+				</button>
+			{/each}
 		</div>
 
-		<!-- Bottom Interactive Preset Selector Index Inside Viewport -->
-		<div
-			class="pointer-events-auto absolute right-4 bottom-4 left-4 z-10 sm:right-6 sm:left-6"
-		>
-			<div class="grid grid-cols-2 border border-[rgba(232,230,225,0.12)] bg-[rgba(5,6,7,0.84)] backdrop-blur-sm sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[rgba(232,230,225,0.12)]">
-				{#each CAMERA_PRESETS as preset, idx (preset.id)}
-					{@const isActive = activePresetIndex === idx}
-					<button
-						type="button"
-						onclick={() => applyPreset(idx)}
-						class="group cursor-pointer px-3.5 py-2.5 text-left transition-colors duration-500 {isActive
-							? 'bg-[rgba(200,155,87,0.10)]'
-							: 'hover:bg-[rgba(232,230,225,0.04)]'}"
-					>
-						<div class="flex items-center justify-between font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-							<span class={isActive ? 'text-[#C89B57]' : 'text-[rgba(232,230,225,0.6)] group-hover:text-[#E8E6E1]'}>
-								{preset.indexLabel}
-							</span>
-							{#if isActive}
-								<span class="h-1 w-1 rounded-full bg-[#C89B57]"></span>
-							{/if}
-						</div>
-						<div
-							class="mt-1 font-display text-sm font-normal leading-snug {isActive
-								? 'text-[#E8E6E1]'
-								: 'text-[rgba(232,230,225,0.72)]'}"
+		<!-- MOBILE READOUT PANEL BELOW SCENE (Collapsed by default on mobile; expanded via DATA + toggle) -->
+		{#if isMobileViewport && dataPanelOpen}
+			<div
+				data-testid="saturn-mobile-below-panel"
+				class="border-t border-[rgba(232,230,225,0.12)] bg-[#050607] p-4 space-y-4"
+			>
+				<div>
+					<div class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#C89B57]">
+						{activePreset.missionPhase}
+					</div>
+					<h3 class="mt-1 font-display text-lg font-normal text-[#E8E6E1]">
+						{activePreset.title}
+					</h3>
+					<p class="mt-1 font-sans text-sm leading-[1.55] text-[rgba(232,230,225,0.78)]">
+						{activePreset.caption}
+					</p>
+				</div>
+
+				<div class="border-t border-[rgba(232,230,225,0.12)] pt-3">
+					<div class="flex items-center justify-between font-mono-tech text-xs uppercase tracking-[0.14em]">
+						<span class="text-[#E8E6E1]">{ringTelemetry.regionName}</span>
+						<span class="text-[#C89B57]">{ringTelemetry.saturnRadii.toFixed(2)} Rₛ · τ {ringTelemetry.opticalDepthTau.toFixed(2)}</span>
+					</div>
+					<p class="mt-1 font-sans text-xs text-[rgba(232,230,225,0.72)]">
+						{ringTelemetry.description}
+					</p>
+					<div class="mt-2.5 flex flex-wrap gap-x-3 gap-y-1.5">
+						{#each RING_ZONE_QUICK_STOPS as zone (zone.label)}
+							{@const isZoneActive = Math.abs(effectiveSampleRadiusKm - zone.km) < 1600}
+							<button
+								type="button"
+								onclick={() => (selectedRadiusKm = zone.km)}
+								class="cursor-pointer border-b pb-0.5 font-mono-tech text-xs uppercase tracking-[0.12em] {isZoneActive
+									? 'border-[#C89B57] text-[#C89B57]'
+									: 'border-transparent text-[rgba(232,230,225,0.65)]'}"
+							>
+								{zone.label}
+							</button>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Bottom Interactive Optical & Geometry Control Hairline Deck (Shown when dataPanelOpen is true) -->
+		{#if dataPanelOpen}
+			<div
+				class="relative z-20 grid grid-cols-1 gap-6 border-t border-[rgba(232,230,225,0.12)] bg-[#050607] px-4 py-5 sm:px-6 lg:grid-cols-12 lg:items-center"
+			>
+				<!-- Slider 1: Solar Phase Angle (Forward vs Back Scattering) -->
+				<div class="lg:col-span-5">
+					<div class="mb-2 flex items-center justify-between font-mono-tech text-xs uppercase tracking-[0.14em]">
+						<label for="saturn-solar-phase" class="text-[rgba(232,230,225,0.68)]">
+							SOLAR PHASE ANGLE (α) <strong class="font-normal text-[#C89B57]">{solarPhaseAngleDeg}°</strong>
+						</label>
+						<button
+							type="button"
+							onclick={triggerHighPhaseEclipseMosaic}
+							class="cursor-pointer border-b border-[rgba(200,155,87,0.45)] pb-0.5 text-xs uppercase tracking-[0.14em] text-[#C89B57] transition-colors duration-300 hover:text-[#DDB474]"
 						>
-							{preset.shortLabel}
-						</div>
-					</button>
-				{/each}
-			</div>
-		</div>
-	</div>
+							168° ECLIPSE HALO
+						</button>
+					</div>
+					<input
+						id="saturn-solar-phase"
+						type="range"
+						min="8"
+						max="174"
+						step="1"
+						value={solarPhaseAngleDeg}
+						oninput={handlePhaseSliderInput}
+						class="h-1 w-full cursor-pointer appearance-none bg-[rgba(232,230,225,0.16)] accent-[#C89B57]"
+					/>
+					<div class="mt-1.5 flex flex-wrap justify-between gap-2 font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
+						<span>8° BACK-SCATTER</span>
+						<span class="text-[#C89B57] text-center">{scatteringRegimeLabel}</span>
+						<span>174° FORWARD HALO</span>
+					</div>
+				</div>
 
-	<!-- Bottom Interactive Optical & Geometry Control Hairline Deck -->
-	<div
-		class="relative z-20 grid grid-cols-1 gap-6 border-t border-[rgba(232,230,225,0.12)] bg-[#050607] px-4 py-5 sm:px-6 lg:grid-cols-12 lg:items-center"
-	>
-		<!-- Slider 1: Solar Phase Angle (Forward vs Back Scattering) -->
-		<div class="lg:col-span-5">
-			<div class="mb-2 flex items-center justify-between font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-				<label for="saturn-solar-phase" class="text-[rgba(232,230,225,0.6)]">
-					SOLAR PHASE ANGLE (α) <strong class="font-normal text-[#C89B57]">{solarPhaseAngleDeg}°</strong>
-				</label>
-				<button
-					type="button"
-					onclick={triggerHighPhaseEclipseMosaic}
-					class="cursor-pointer border-b border-[rgba(200,155,87,0.45)] pb-0.5 text-[11px] uppercase tracking-[0.16em] text-[#C89B57] transition-colors duration-500 hover:text-[#DDB474]"
-				>
-					168° ECLIPSE HALO
-				</button>
-			</div>
-			<input
-				id="saturn-solar-phase"
-				type="range"
-				min="8"
-				max="174"
-				step="1"
-				value={solarPhaseAngleDeg}
-				oninput={handlePhaseSliderInput}
-				class="h-1 w-full cursor-pointer appearance-none bg-[rgba(232,230,225,0.16)] accent-[#C89B57]"
-			/>
-			<div class="mt-1.5 flex flex-wrap justify-between gap-2 font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
-				<span>8° BACK-SCATTER</span>
-				<span class="text-[#C89B57] text-center">{scatteringRegimeLabel}</span>
-				<span>174° FORWARD HALO</span>
-			</div>
-		</div>
+				<!-- Slider 2: Ring Plane Tilt / Seasonal Obliquity -->
+				<div class="lg:col-span-3">
+					<div class="mb-2 flex items-center justify-between font-mono-tech text-xs uppercase tracking-[0.14em]">
+						<label for="saturn-ring-tilt" class="text-[rgba(232,230,225,0.68)]">
+							RING INCLINATION <strong class="font-normal text-[#C89B57]">{ringTiltDeg.toFixed(1)}°</strong>
+						</label>
+						<span class="text-[11px] text-[rgba(232,230,225,0.6)]">±26.7° MAX</span>
+					</div>
+					<input
+						id="saturn-ring-tilt"
+						type="range"
+						min="-27"
+						max="27"
+						step="0.5"
+						value={ringTiltDeg}
+						oninput={handleTiltSliderInput}
+						class="h-1 w-full cursor-pointer appearance-none bg-[rgba(232,230,225,0.16)] accent-[#C89B57]"
+					/>
+					<div class="mt-1.5 flex justify-between font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
+						<span>-26.7° SOUTH</span>
+						<span>0° EQUINOX</span>
+						<span>+26.7° NORTH</span>
+					</div>
+				</div>
 
-		<!-- Slider 2: Ring Plane Tilt / Seasonal Obliquity -->
-		<div class="lg:col-span-3">
-			<div class="mb-2 flex items-center justify-between font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-				<label for="saturn-ring-tilt" class="text-[rgba(232,230,225,0.6)]">
-					RING INCLINATION <strong class="font-normal text-[#C89B57]">{ringTiltDeg.toFixed(1)}°</strong>
-				</label>
-				<span class="text-[11px] text-[rgba(232,230,225,0.6)]">±26.7° MAX</span>
+				<!-- Slider 3: Radial Optical Depth Scanner & Trajectory Toggle -->
+				<div class="lg:col-span-4">
+					<div class="mb-2 flex items-center justify-between font-mono-tech text-xs uppercase tracking-[0.14em]">
+						<label for="saturn-ring-radius" class="text-[rgba(232,230,225,0.68)]">
+							SCANNER <strong class="font-normal text-[#E8E6E1]">{effectiveSampleRadiusKm.toLocaleString()} KM</strong>
+							<span class="text-[#C89B57]">(τ {ringTelemetry.opticalDepthTau.toFixed(2)})</span>
+						</label>
+						<button
+							type="button"
+							onclick={() => (showTrajectoryOverlay = !showTrajectoryOverlay)}
+							class="cursor-pointer border-b pb-0.5 text-xs uppercase tracking-[0.14em] transition-colors duration-300 {showTrajectoryOverlay
+								? 'border-[#C89B57] text-[#C89B57]'
+								: 'border-transparent text-[rgba(232,230,225,0.6)] hover:text-[#E8E6E1]'}"
+						>
+							{showTrajectoryOverlay ? 'ARCS: ON' : 'ARCS: OFF'}
+						</button>
+					</div>
+					<input
+						id="saturn-ring-radius"
+						type="range"
+						min={RING_INNER_RADIUS_KM}
+						max={RING_OUTER_RADIUS_KM}
+						step="100"
+						value={selectedRadiusKm}
+						oninput={handleRadiusSliderInput}
+						class="h-1 w-full cursor-pointer appearance-none bg-[rgba(232,230,225,0.16)] accent-[#C89B57]"
+					/>
+					<div class="mt-1.5 flex justify-between font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
+						<span>66,900 KM (D)</span>
+						<span>117,580 KM (DIV)</span>
+						<span>140,180 KM (F)</span>
+					</div>
+				</div>
 			</div>
-			<input
-				id="saturn-ring-tilt"
-				type="range"
-				min="-27"
-				max="27"
-				step="0.5"
-				value={ringTiltDeg}
-				oninput={handleTiltSliderInput}
-				class="h-1 w-full cursor-pointer appearance-none bg-[rgba(232,230,225,0.16)] accent-[#C89B57]"
-			/>
-			<div class="mt-1.5 flex justify-between font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
-				<span>-26.7° SOUTH</span>
-				<span>0° EQUINOX</span>
-				<span>+26.7° NORTH</span>
-			</div>
-		</div>
-
-		<!-- Slider 3: Radial Optical Depth Scanner & Trajectory Toggle -->
-		<div class="lg:col-span-4">
-			<div class="mb-2 flex items-center justify-between font-mono-tech text-[11px] uppercase tracking-[0.16em]">
-				<label for="saturn-ring-radius" class="text-[rgba(232,230,225,0.6)]">
-					SCANNER <strong class="font-normal text-[#E8E6E1]">{effectiveSampleRadiusKm.toLocaleString()} KM</strong>
-					<span class="text-[#C89B57]">(τ {ringTelemetry.opticalDepthTau.toFixed(2)})</span>
-				</label>
-				<button
-					type="button"
-					onclick={() => (showTrajectoryOverlay = !showTrajectoryOverlay)}
-					class="cursor-pointer border-b pb-0.5 text-[11px] uppercase tracking-[0.16em] transition-colors duration-500 {showTrajectoryOverlay
-						? 'border-[#C89B57] text-[#C89B57]'
-						: 'border-transparent text-[rgba(232,230,225,0.6)] hover:text-[#E8E6E1]'}"
-				>
-					{showTrajectoryOverlay ? 'ARCS: ON' : 'ARCS: OFF'}
-				</button>
-			</div>
-			<input
-				id="saturn-ring-radius"
-				type="range"
-				min={RING_INNER_RADIUS_KM}
-				max={RING_OUTER_RADIUS_KM}
-				step="100"
-				value={selectedRadiusKm}
-				oninput={handleRadiusSliderInput}
-				class="h-1 w-full cursor-pointer appearance-none bg-[rgba(232,230,225,0.16)] accent-[#C89B57]"
-			/>
-			<div class="mt-1.5 flex justify-between font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
-				<span>66,900 KM (D)</span>
-				<span>117,580 KM (DIV)</span>
-				<span>140,180 KM (F)</span>
-			</div>
-		</div>
-	</div>
+		{/if}
 	{/if}
 </section>
-
-<style>
-	@keyframes saturnKenBurns {
-		0% {
-			transform: scale(1) translate3d(0, 0, 0);
-		}
-		100% {
-			transform: scale(1.08) translate3d(-1.5%, -1%, 0);
-		}
-	}
-
-	.saturn-ken-burns {
-		will-change: transform;
-		animation: saturnKenBurns 26s cubic-bezier(0.22, 1, 0.36, 1) infinite alternate;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.saturn-ken-burns {
-			animation: none;
-			transform: none;
-		}
-	}
-</style>

@@ -216,7 +216,7 @@
 >
 	<div class="mx-auto max-w-[1440px] px-3 sm:px-8 lg:px-12">
 		<div
-			class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-0.5 py-1.5 sm:py-0 min-h-11 sm:h-13 font-mono-tech text-[10px] sm:text-[11px] tracking-[0.06em] sm:tracking-[0.16em] uppercase opacity-85 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500"
+			class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-0.5 py-1.5 sm:py-0 min-h-11 sm:h-13 font-mono-tech text-xs tracking-[0.06em] sm:tracking-[0.16em] uppercase opacity-85 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500"
 			class:opacity-100={telemetryDrawerOpen || chapterMenuOpen}
 		>
 			<!-- 1. Wordmark Link (Returns Home) -->
@@ -351,7 +351,7 @@
 								: 'border-[#E8E6E1]/12 bg-[#050607]/70 hover:border-[#C89B57]/60 hover:bg-[#E8E6E1]/[0.02]'}"
 						>
 							<div>
-								<div class="flex items-center justify-between gap-2 font-mono-tech text-[10px] tracking-[0.16em] uppercase">
+								<div class="flex items-center justify-between gap-2 font-mono-tech text-xs tracking-[0.14em] uppercase">
 									<span class={isActiveRoute ? 'text-[#C89B57]' : 'text-[#E8E6E1]/55 group-hover:text-[#C89B57]'}>
 										{ch.indexNumber} · {ch.chapterNumber}
 									</span>
@@ -365,7 +365,7 @@
 								</p>
 							</div>
 
-							<div class="mt-3 pt-2.5 border-t border-[#E8E6E1]/10 flex items-center justify-between gap-2 font-mono-tech text-[10px] tracking-[0.14em] uppercase">
+							<div class="mt-3 pt-2.5 border-t border-[#E8E6E1]/10 flex items-center justify-between gap-2 font-mono-tech text-[11px] tracking-[0.14em] uppercase">
 								<span class="text-[#E8E6E1]/50">{ch.milestoneCount} MILESTONES · {ch.killerStat.value}</span>
 								<span class="text-[#C89B57] group-hover:translate-x-0.5 transition-transform duration-300">
 									ENTER ↗
@@ -383,7 +383,7 @@
 							: 'border-[#C89B57]/35 bg-[#08090B]/90 hover:border-[#C89B57] hover:bg-[#C89B57]/[0.05]'}"
 					>
 						<div>
-							<div class="flex items-center justify-between gap-2 font-mono-tech text-[10px] tracking-[0.16em] uppercase">
+							<div class="flex items-center justify-between gap-2 font-mono-tech text-xs tracking-[0.14em] uppercase">
 								<span class="text-[#C89B57]">08 · COLOPHON</span>
 								<span class="text-[#E8E6E1]/60">ARCHIVE &amp; SPEC</span>
 							</div>
@@ -395,7 +395,7 @@
 							</p>
 						</div>
 
-						<div class="mt-3 pt-2.5 border-t border-[#E8E6E1]/10 flex items-center justify-between gap-2 font-mono-tech text-[10px] tracking-[0.14em] uppercase">
+						<div class="mt-3 pt-2.5 border-t border-[#E8E6E1]/10 flex items-center justify-between gap-2 font-mono-tech text-[11px] tracking-[0.14em] uppercase">
 							<span class="text-[#E8E6E1]/55">SOURCES · ASSETS · AI DAG</span>
 							<span class="text-[#C89B57] group-hover:translate-x-0.5 transition-transform duration-300">
 								OPEN ↗

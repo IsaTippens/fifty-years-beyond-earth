@@ -209,7 +209,7 @@
 					>
 						<div>
 							<div
-								class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/70"
+								class="font-mono-tech text-xs uppercase tracking-[0.16em] text-[#E8E6E1]/70"
 								style="text-shadow: 0 1px 10px rgba(5, 6, 7, 0.96);"
 							>
 								{ch.killerStat.label}
@@ -247,7 +247,7 @@
 
 			<!-- Mandatory Archival Plate Credit -->
 			<div
-				class="pointer-events-none mt-6 md:mt-0 md:absolute md:bottom-5 md:right-10 lg:right-48 z-10 max-w-[90vw] text-right font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/68"
+				class="pointer-events-none mt-6 md:mt-0 md:absolute md:bottom-5 md:right-10 lg:right-48 z-10 max-w-[90vw] text-right font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E8E6E1]/68"
 				style="text-shadow: 0 1px 14px rgba(5, 6, 7, 0.98);"
 			>
 				ARCHIVE PLATE // {ch.visual.archiveId} · {ch.visual.creditLine}

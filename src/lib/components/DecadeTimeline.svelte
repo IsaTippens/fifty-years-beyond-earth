@@ -259,14 +259,14 @@
 
 			<!-- Active Filter Summary Readout -->
 			<div class="border-l border-[rgba(232,230,225,0.14)] pl-4 py-0.5 shrink-0">
-				<div class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
+				<div class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
 					MATCHING MISSIONS
 				</div>
 				<div class="mt-0.5 flex items-baseline gap-2">
 					<span class="font-display text-2xl sm:text-3xl font-normal text-[#C89B57]">
 						{filteredMilestones.length}
 					</span>
-					<span class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
+					<span class="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)]">
 						/ {ALL_MILESTONES.length} ARCHIVED NODES
 					</span>
 				</div>
@@ -277,7 +277,7 @@
 		<div class="border-b border-[rgba(232,230,225,0.10)] pb-4 mb-5 md:pb-6 md:mb-10 space-y-2.5 md:space-y-4">
 			<!-- Row 1: Decade Filter -->
 			<div class="flex flex-wrap items-center gap-y-1.5 gap-x-4 sm:gap-x-6">
-				<span class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)] w-24 sm:w-28 shrink-0">
+				<span class="font-mono-tech text-xs uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)] w-24 sm:w-28 shrink-0">
 					01 · DECADE
 				</span>
 				<div class="flex flex-wrap gap-x-3.5 sm:gap-x-5 gap-y-1.5">
@@ -298,7 +298,7 @@
 
 			<!-- Row 2: Domain / Agency Filter -->
 			<div class="flex flex-wrap items-center gap-y-1.5 gap-x-4 sm:gap-x-6 border-t border-[rgba(232,230,225,0.09)] pt-2.5 md:pt-4">
-				<span class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)] w-24 sm:w-28 shrink-0">
+				<span class="font-mono-tech text-xs uppercase tracking-[0.16em] text-[rgba(232,230,225,0.6)] w-24 sm:w-28 shrink-0">
 					02 · DOMAIN
 				</span>
 				<div class="flex flex-wrap gap-x-3.5 sm:gap-x-5 gap-y-1.5">
@@ -330,13 +330,13 @@
 			<div class="xl:col-span-7 border border-[rgba(232,230,225,0.10)] bg-[#050607] p-3 sm:p-6 overflow-hidden">
 				<div class="flex flex-wrap items-baseline justify-between gap-2 mb-3 border-b border-[rgba(232,230,225,0.10)] pb-2.5">
 					<div>
-						<h3 class="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-[#C89B57]">
+						<h3 class="font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C89B57]">
 							LOGARITHMIC DISTANCE-VS-TIME TRAJECTORY PLOT (10² KM → 10¹¹ KM)
 						</h3>
 					</div>
 
 					<!-- Legend -->
-					<div class="flex flex-wrap items-center gap-3 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
+					<div class="flex flex-wrap items-center gap-3 font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">
 						<span class="flex items-center gap-1.5">
 							<span class="h-1.5 w-1.5 rounded-full bg-[#E8E6E1]"></span> Crewed
 						</span>
@@ -353,11 +353,11 @@
 				</div>
 
 				<!-- Responsive SVG Container -->
-				<div class="relative w-full overflow-x-auto">
+				<div class="relative w-full overflow-x-auto pb-1">
+					<div class="min-w-[960px] w-full">
 					<svg
 						viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
 						class="w-full h-auto select-none"
-						role="img"
 						aria-label="Logarithmic scatter plot of space missions by year and distance from Earth"
 					>
 						<defs>
@@ -396,7 +396,7 @@
 									y={y + 3.5}
 									text-anchor="end"
 									font-family="var(--font-mono)"
-									font-size="10"
+									font-size="12.5"
 									fill="rgba(232, 230, 225, 0.6)"
 								>
 									{band.label}
@@ -422,7 +422,7 @@
 									y={PLOT_HEIGHT - PAD_BOTTOM + 20}
 									text-anchor="middle"
 									font-family="var(--font-mono)"
-									font-size="10.5"
+									font-size="13"
 									fill={yr === 2026 || yr === 2075 ? '#C89B57' : 'rgba(232, 230, 225, 0.6)'}
 								>
 									{yr}
@@ -442,7 +442,7 @@
 							x={yearToPlotX(2005)}
 							y={kmToPlotY(94 * AU_IN_KM) - 10}
 							font-family="var(--font-mono)"
-							font-size="9.5"
+							font-size="13"
 							fill="#C89B57"
 							opacity="0.88"
 						>
@@ -540,7 +540,7 @@
 										y={Math.max(PAD_TOP + 18, y - 19)}
 										text-anchor="middle"
 										font-family="var(--font-mono)"
-										font-size="10"
+										font-size="12.5"
 										fill="#E8E6E1"
 									>
 										{calloutText}
@@ -549,6 +549,7 @@
 							</g>
 						{/each}
 					</svg>
+					</div>
 				</div>
 			</div>
 
@@ -585,25 +586,25 @@
 					<!-- Compact 2x2 Hairline Telemetry Grid -->
 					<div class="mt-3 grid grid-cols-2 border-y border-[rgba(232,230,225,0.10)] divide-x divide-y divide-[rgba(232,230,225,0.10)] font-mono-tech">
 						<div class="py-2 pr-3">
-							<div class="text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">AGENCY</div>
+							<div class="text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">AGENCY</div>
 							<div class="mt-0.5 text-xs text-[#E8E6E1] leading-snug" title={activeMilestone.agency}>
 								{activeMilestone.agency}
 							</div>
 						</div>
 						<div class="py-2 pl-3">
-							<div class="text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">DISTANCE</div>
+							<div class="text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">DISTANCE</div>
 							<div class="mt-0.5 text-xs text-[#C89B57] leading-snug">
 								{formatMissionDistance(activeMilestone.distanceFromEarthKm)}
 							</div>
 						</div>
 						<div class="py-2 pr-3">
-							<div class="text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">REGIME</div>
+							<div class="text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">REGIME</div>
 							<div class="mt-0.5 text-xs text-[#E8E6E1] leading-snug">
 								{activeMilestone.locationOrOrbit}
 							</div>
 						</div>
 						<div class="py-2 pl-3">
-							<div class="text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">VOYAGER 1 EPOCH</div>
+							<div class="text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)]">VOYAGER 1 EPOCH</div>
 							<div class="mt-0.5 text-xs text-[#C89B57] leading-snug">
 								{activeMilestone.voyagerAuAtEvent} AU
 							</div>
@@ -629,7 +630,7 @@
 						<div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[rgba(232,230,225,0.10)] pt-3">
 							{#each activeMilestone.keyStats.slice(0, 4) as stat}
 								<div>
-									<div class="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)] leading-snug">
+									<div class="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[rgba(232,230,225,0.6)] leading-snug">
 										{stat.label}
 									</div>
 									<div class="mt-0.5 font-display text-base sm:text-lg font-normal text-[#E8E6E1]">
@@ -687,7 +688,7 @@
 						}}
 					>
 						<div class="min-w-0 flex-1 sm:w-full">
-							<div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em]">
+							<div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 font-mono-tech text-[11px] uppercase tracking-[0.14em]">
 								<span class="text-[#C89B57] shrink-0">{String(idx + 1).padStart(2, '0')} · {m.year}</span>
 								<span class="hidden sm:inline-flex items-center gap-1.5 text-[rgba(232,230,225,0.6)]">
 									<span class="h-1.5 w-1.5 rounded-full shrink-0" style={`background-color: ${color};`}></span>
@@ -700,7 +701,7 @@
 							</h4>
 						</div>
 
-						<div class="sm:mt-3 sm:pt-2.5 sm:w-full sm:border-t sm:border-[rgba(232,230,225,0.09)] flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.14em] shrink-0">
+						<div class="sm:mt-3 sm:pt-2.5 sm:w-full sm:border-t sm:border-[rgba(232,230,225,0.09)] flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[11px] uppercase tracking-[0.14em] shrink-0">
 							<span class="hidden sm:inline text-[rgba(232,230,225,0.6)] leading-snug">
 								{formatMissionDistance(m.distanceFromEarthKm)}
 							</span>
