@@ -5,6 +5,12 @@
   import { telemetryStore, type TelemetryState } from '$lib/stores/scrollTelemetry';
   import { introPhaseStore } from '$lib/stores/introSequence';
   import {
+    journeyStore,
+    JOURNEY_WAYPOINTS,
+    type JourneyState,
+    type JourneyWaypointId
+  } from '$lib/stores/landingJourney';
+  import {
     NEBULA_VERTEX_SHADER,
     NEBULA_FRAGMENT_SHADER
   } from '$lib/shaders/nebula';
@@ -786,17 +792,15 @@
   }
 
   // ============================================================================
-  // Component State & Diegetic Waypoint Telemetry Callout
+  // Component State & the Single Solo-Beat Waypoint Label
   // ============================================================================
-  interface WaypointHudState {
-    id: string;
+  interface WaypointLabelState {
+    id: JourneyWaypointId;
     name: string;
     distanceLabel: string;
-    missionNote: string;
-    screenX: number;
-    screenY: number;
+    left: number;
+    top: number;
     opacity: number;
-    alignRight: boolean;
   }
 
   let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -811,7 +815,7 @@
 
   let currentScrollProgress = $state(0);
   let currentChapterIndex = $state(0);
-  let activeWaypointHud = $state<WaypointHudState | null>(null);
+  let waypointLabel = $state<WaypointLabelState | null>(null);
   // Canvas fades up out of the void once the first frame exists, instead of popping in
   let sceneRevealed = $state(false);
 
@@ -857,10 +861,18 @@
     // Mounted mid-journey (late load or restored scroll): Earth is already on station
     let earthArrivalLinear = get(introPhaseStore) === 'journey' ? 1 : 0;
 
+    let targetJourney = 0;
+    let targetLabelOpacity = 0;
+    const unsubscribeJourney = journeyStore.subscribe((state: JourneyState) => {
+      targetJourney = Number.isFinite(state.position) ? state.position : 0;
+      targetLabelOpacity = Number.isFinite(state.labelOpacity) ? state.labelOpacity : 0;
+    });
+
     if (!canvasEl) {
       return () => {
         unsubscribeTelemetry();
         unsubscribeIntro();
+        unsubscribeJourney();
       };
     }
 
@@ -878,6 +890,7 @@
       return () => {
         unsubscribeTelemetry();
         unsubscribeIntro();
+        unsubscribeJourney();
       };
     }
 
@@ -895,7 +908,6 @@
       0.1,
       900
     );
-    camera.position.set(0, 0, 12);
 
     // ==========================================================================
     // 1. Single Skybox Pass (NEBULA_VERTEX_SHADER / NEBULA_FRAGMENT_SHADER)
@@ -1200,6 +1212,8 @@
     });
     const marsMesh = new THREE.Mesh(marsGeometry, marsMaterial);
     marsMesh.rotation.z = THREE.MathUtils.degToRad(25.19);
+    // North tipped toward the viewer: keeps the mosaic's ragged south-polar gaps behind the limb
+    marsMesh.rotation.x = 0.32;
     marsGroup.add(marsMesh);
 
     textureLoader.load('/assets/textures/mars-map.webp', (tex) => {
@@ -1256,7 +1270,8 @@
       opacity: 0.0
     });
     const europaMesh = new THREE.Mesh(galileanMoonGeo, europaMat);
-    europaMesh.position.set(-4.8, 0.18, 1.6);
+    // Trailing on the far side from the outbound path, clear of the next waypoint in frame
+    europaMesh.position.set(4.6, 0.3, 1.6);
     jupiterGroup.add(europaMesh);
 
     // ==========================================================================
@@ -1382,6 +1397,8 @@
     });
     const plutoMesh = new THREE.Mesh(plutoGeo, plutoMat);
     plutoMesh.rotation.z = THREE.MathUtils.degToRad(12.0);
+    // North tipped toward the viewer: centres Tombaugh Regio, hides the unimaged southern gap
+    plutoMesh.rotation.x = 0.36;
     plutoGroup.add(plutoMesh);
 
     // Tidally locked companion Charon
@@ -1465,7 +1482,8 @@
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      depthTest: false
+      // Occluded by bodies in front of it: nothing may cover the waypoint being observed
+      depthTest: true
     });
     const paleBlueDotMesh = new THREE.Mesh(paleBlueDotGeometry, paleBlueDotMaterial);
     paleBlueDotMesh.renderOrder = 2;
@@ -1524,7 +1542,318 @@
     trajectoryGroup.add(trajectoryLine);
 
     // ==========================================================================
-    // 10. Interaction, Flyby Choreography & 60fps Damped Animation Loop
+    // 10. Journey Rig — One World, One Camera: Waypoint Bodies & Their Framings
+    // ==========================================================================
+    const TAN_HALF_FOV = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+    /** Bodies thin out with distance instead of popping at the far plane. */
+    const BODY_FADE_NEAR = 230;
+    const BODY_FADE_FAR = 340;
+    /** Earth settles into a pale blue dot as the camera leaves it behind. */
+    const PALE_BLUE_DOT_NEAR = 60;
+    const PALE_BLUE_DOT_FAR = 150;
+    /** Star shells sit this far ahead of the camera, as in the original fixed rig. */
+    const STAR_SHELL_LEAD = 12.0;
+    /** Star shells drift slower than forward travel so they read as distant. */
+    const STAR_TRAVEL_RATIO = 0.5;
+    /** Camera speed (world units / s) to warp-streak factor. */
+    const WARP_SPEED_SCALE = 0.0024;
+    /** How far the camera turns into its flight heading, and how much it banks with the turn. */
+    const FLIGHT_HEADING_FOLLOW = 0.32;
+    const FLIGHT_BANK = 0.6;
+    /** Damping rate (1/s) easing the camera onto the scroll-driven journey coordinate. */
+    const JOURNEY_DAMPING = 6.0;
+    /** Mesh yaw that turns texture column `u` toward +Z (the camera) for SphereGeometry UVs. */
+    const faceTextureColumn = (u: number): number => Math.PI * 0.5 - Math.PI * 2.0 * u;
+    // Each body shows its best-imaged hemisphere: the archival mosaics have unimaged gaps elsewhere
+    const MARS_FACE_YAW = faceTextureColumn(0.56); // Tharsis & Valles Marineris
+    const JUPITER_FACE_YAW = faceTextureColumn(0.58); // Great Red Spot
+    const SATURN_FACE_YAW = faceTextureColumn(0.25);
+    const PLUTO_FACE_YAW = faceTextureColumn(0.49); // Tombaugh Regio
+    // Charon borrows Pluto's map: this column's dark unimaged cap reads as Mordor Macula
+    const CHARON_FACE_YAW = faceTextureColumn(0.92);
+    /** Scroll-scrubbed spin (rad per journey unit) while a waypoint is observed. */
+    const OBSERVE_SPIN_RATE = 0.12;
+
+    /**
+     * A camera framing: either the framing centre's ndc position plus its apparent radius as a
+     * fraction of the viewport half-height (the camera looks straight down −Z), or a fixed world
+     * offset from the centre (the hero shot, which must not depend on aspect ratio).
+     */
+    type CameraFrame =
+      | { x: number; y: number; r: number }
+      | { offset: readonly [number, number, number] };
+
+    interface StationRig {
+      id: JourneyWaypointId;
+      center: THREE.Vector3;
+      frameRadius: number;
+      /** Extra sideways push on departure so the flight clears the body instead of grazing it. */
+      clearance: number;
+      /** [hold start, hold end]: the slow drift across the panel and solo beats. */
+      desktop: readonly [CameraFrame, CameraFrame];
+      mobile: readonly [CameraFrame, CameraFrame];
+      /** Solo label beside the body, or in the lower-left corner for diffuse subjects. */
+      label: 'beside' | 'corner';
+    }
+
+    // Bodies stay put in world space; only the camera travels
+    marsGroup.position.set(-24, 6, -130);
+    jupiterGroup.position.set(18, -3, -260);
+    saturnGroup.position.set(-18, 3, -390);
+    plutoGroup.position.set(18, -2, -520);
+    heliopauseMesh.position.set(0, 0, -660);
+    paleBlueDotMesh.position.set(14, 5, -790);
+    // The filament departs Earth: anchored where it sat relative to the hero camera
+    const TRAJECTORY_ANCHOR = new THREE.Vector3(-3.2, 1.3, -4.6);
+
+    saturnGroup.updateMatrixWorld(true);
+    saturnBodyUniforms.uPlanetCenter.value.copy(saturnGroup.position);
+    saturnRingUniforms.uPlanetCenter.value.copy(saturnGroup.position);
+    const ringNormalWorld = new THREE.Vector3(0, 1, 0)
+      .applyQuaternion(saturnTiltGroup.getWorldQuaternion(new THREE.Quaternion()))
+      .normalize();
+    saturnBodyUniforms.uRingNormal.value.copy(ringNormalWorld);
+
+    // Fixed sunlit-gibbous phase per body: the Sun sits behind the outbound camera
+    marsUniforms.uSunDirection.value.set(0.75, 0.24, 0.68).normalize();
+    jupiterUniforms.uSunDirection.value.set(-0.75, 0.22, 0.68).normalize();
+    saturnBodyUniforms.uSunDirection.value.set(0.72, 0.36, 0.68).normalize();
+    plutoUniforms.uSunDirection.value.set(-0.68, 0.25, 0.68).normalize();
+
+    const RIG_DEFS: Record<JourneyWaypointId, Omit<StationRig, 'id'>> = {
+      earth: {
+        center: new THREE.Vector3(0, 0, 0),
+        frameRadius: 5.35,
+        clearance: 6.5,
+        desktop: [{ offset: [-3.2, 1.3, 7.4] }, { x: 0.24, y: -0.04, r: 0.58 }],
+        mobile: [{ offset: [-1.2, 1.8, 8.8] }, { x: 0, y: 0.06, r: 0.36 }],
+        label: 'beside'
+      },
+      mars: {
+        center: marsGroup.position.clone(),
+        frameRadius: 2.15,
+        clearance: 3.0,
+        desktop: [{ x: -0.22, y: 0.02, r: 0.42 }, { x: -0.18, y: 0, r: 0.48 }],
+        mobile: [{ x: 0, y: 0.08, r: 0.3 }, { x: 0, y: 0.06, r: 0.34 }],
+        label: 'beside'
+      },
+      jupiter: {
+        center: jupiterGroup.position.clone(),
+        frameRadius: 3.45,
+        clearance: 5.5,
+        desktop: [{ x: 0.2, y: 0, r: 0.44 }, { x: 0.16, y: 0.02, r: 0.5 }],
+        mobile: [{ x: 0, y: 0.08, r: 0.3 }, { x: 0, y: 0.06, r: 0.34 }],
+        label: 'beside'
+      },
+      saturn: {
+        center: saturnGroup.position.clone(),
+        frameRadius: saturnRingOuter,
+        clearance: 8.0,
+        desktop: [{ x: -0.18, y: 0.02, r: 0.5 }, { x: -0.14, y: 0, r: 0.56 }],
+        mobile: [{ x: 0, y: 0.06, r: 0.38 }, { x: 0, y: 0.05, r: 0.42 }],
+        label: 'beside'
+      },
+      pluto: {
+        // Framed between Pluto and Charon, weighted toward Pluto
+        center: plutoGroup.position.clone().add(new THREE.Vector3(-1.0, 0.25, -0.7)),
+        frameRadius: 2.6,
+        clearance: 4.0,
+        desktop: [{ x: 0.2, y: 0, r: 0.36 }, { x: 0.17, y: 0.02, r: 0.42 }],
+        mobile: [{ x: 0.04, y: 0.08, r: 0.26 }, { x: 0.04, y: 0.06, r: 0.29 }],
+        label: 'beside'
+      },
+      heliopause: {
+        center: heliopauseMesh.position.clone(),
+        frameRadius: 24.0,
+        clearance: 0,
+        desktop: [{ x: 0, y: 0, r: 0.72 }, { x: 0, y: 0.02, r: 0.82 }],
+        mobile: [{ x: 0, y: 0.04, r: 0.4 }, { x: 0, y: 0.04, r: 0.45 }],
+        label: 'corner'
+      },
+      interstellar: {
+        center: paleBlueDotMesh.position.clone(),
+        frameRadius: 2.75,
+        clearance: 2.0,
+        desktop: [{ x: 0.22, y: 0.12, r: 0.2 }, { x: 0.2, y: 0.1, r: 0.24 }],
+        mobile: [{ x: 0, y: 0.12, r: 0.16 }, { x: 0, y: 0.1, r: 0.19 }],
+        label: 'beside'
+      },
+      'deep-void': {
+        center: new THREE.Vector3(-6, 2, -900),
+        frameRadius: 1.0,
+        clearance: 0,
+        desktop: [{ offset: [0, 0, 40] }, { offset: [0, -0.5, 30] }],
+        mobile: [{ offset: [0, 0, 40] }, { offset: [0, -0.5, 30] }],
+        label: 'corner'
+      }
+    };
+    const STATION_RIGS: StationRig[] = JOURNEY_WAYPOINTS.map((w) => ({ id: w.id, ...RIG_DEFS[w.id] }));
+    const MAX_JOURNEY = 2 * (STATION_RIGS.length - 1) + 1;
+
+    const smootherstep01 = (t: number): number => {
+      const x = THREE.MathUtils.clamp(t, 0, 1);
+      return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+    };
+    const bodyFade = (dist: number): number =>
+      1.0 - THREE.MathUtils.smoothstep(dist, BODY_FADE_NEAR, BODY_FADE_FAR);
+
+    const framePose = (rig: StationRig, frame: CameraFrame, aspect: number, out: THREE.Vector3) => {
+      if ('offset' in frame) {
+        return out.set(
+          rig.center.x + frame.offset[0],
+          rig.center.y + frame.offset[1],
+          rig.center.z + frame.offset[2]
+        );
+      }
+      const d = rig.frameRadius / (frame.r * TAN_HALF_FOV);
+      return out.set(
+        rig.center.x - frame.x * TAN_HALF_FOV * aspect * d,
+        rig.center.y - frame.y * TAN_HALF_FOV * d,
+        rig.center.z + d
+      );
+    };
+
+    const holdStartPose = new THREE.Vector3();
+    const holdEndPose = new THREE.Vector3();
+    const holdPose = (k: number, h: number, aspect: number, mobile: boolean, out: THREE.Vector3) => {
+      const rig = STATION_RIGS[k];
+      const frames = mobile ? rig.mobile : rig.desktop;
+      framePose(rig, frames[0], aspect, holdStartPose);
+      framePose(rig, frames[1], aspect, holdEndPose);
+      return out.copy(holdStartPose).lerp(holdEndPose, smootherstep01(h));
+    };
+
+    // Flight k → k+1: cubic Bézier that first slides away from body k, then arrives straight
+    // behind body k+1 so it grows in place as the camera settles.
+    const flightP0 = new THREE.Vector3();
+    const flightP1 = new THREE.Vector3();
+    const flightP2 = new THREE.Vector3();
+    const flightP3 = new THREE.Vector3();
+    const setFlightControls = (k: number, aspect: number, mobile: boolean) => {
+      const rig = STATION_RIGS[k];
+      holdPose(k, 1, aspect, mobile, flightP0);
+      holdPose(k + 1, 0, aspect, mobile, flightP3);
+      const lateral = flightP3.x - flightP0.x;
+      const offCentre = flightP0.x - rig.center.x;
+      const away = Math.abs(offCentre) > 0.25 ? Math.sign(offCentre) : Math.sign(lateral) || 1;
+      const dz = Math.max(1, flightP0.z - flightP3.z);
+      flightP1.set(
+        flightP0.x + lateral * 0.55 + away * rig.clearance,
+        flightP0.y + (flightP3.y - flightP0.y) * 0.3,
+        flightP0.z - dz * 0.18
+      );
+      flightP2.set(flightP3.x, flightP3.y, flightP3.z + dz * 0.32);
+    };
+    const bezierPoint = (u: number, out: THREE.Vector3) => {
+      const v = 1 - u;
+      const b0 = v * v * v;
+      const b1 = 3 * v * v * u;
+      const b2 = 3 * v * u * u;
+      const b3 = u * u * u;
+      return out.set(
+        flightP0.x * b0 + flightP1.x * b1 + flightP2.x * b2 + flightP3.x * b3,
+        flightP0.y * b0 + flightP1.y * b1 + flightP2.y * b2 + flightP3.y * b3,
+        flightP0.z * b0 + flightP1.z * b1 + flightP2.z * b2 + flightP3.z * b3
+      );
+    };
+
+    // Camera speed scales with distance to the nearer of the two bodies, so apparent motion stays
+    // even: the departed planet drifts off over a real stretch of scroll instead of whipping past,
+    // and the next one grows steadily (a logarithmic approach). Tables map that "visual distance"
+    // back to the curve parameter; cached per flight and viewport shape.
+    const FLIGHT_SAMPLES = 96;
+    const flightTables = new Map<string, Float32Array>();
+    const flightSampleA = new THREE.Vector3();
+    const flightSampleB = new THREE.Vector3();
+    const flightTable = (k: number, aspect: number, mobile: boolean): Float32Array => {
+      const key = `${k}|${aspect.toFixed(3)}|${mobile ? 1 : 0}`;
+      const cached = flightTables.get(key);
+      if (cached) return cached;
+      const from = STATION_RIGS[k];
+      const to = STATION_RIGS[k + 1];
+      const table = new Float32Array(FLIGHT_SAMPLES + 1);
+      bezierPoint(0, flightSampleA);
+      let total = 0;
+      for (let i = 1; i <= FLIGHT_SAMPLES; i++) {
+        bezierPoint(i / FLIGHT_SAMPLES, flightSampleB);
+        const step = flightSampleA.distanceTo(flightSampleB);
+        flightSampleA.add(flightSampleB).multiplyScalar(0.5);
+        const proximity = Math.min(
+          Math.max(from.frameRadius * 0.5, flightSampleA.distanceTo(from.center)),
+          Math.max(to.frameRadius * 0.5, flightSampleA.distanceTo(to.center))
+        );
+        total += step / proximity;
+        table[i] = total;
+        flightSampleA.copy(flightSampleB);
+      }
+      for (let i = 1; i <= FLIGHT_SAMPLES; i++) table[i] /= total;
+      flightTables.set(key, table);
+      return table;
+    };
+    const curveParamAt = (table: Float32Array, tau: number): number => {
+      let lo = 0;
+      let hi = FLIGHT_SAMPLES;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (table[mid] < tau) lo = mid;
+        else hi = mid;
+      }
+      const span = table[hi] - table[lo];
+      return (lo + (span > 1e-6 ? (tau - table[lo]) / span : 0)) / FLIGHT_SAMPLES;
+    };
+
+    /** Camera position along flight k at scroll fraction t; returns the heading-follow weight. */
+    const flightPose = (
+      k: number,
+      t: number,
+      aspect: number,
+      mobile: boolean,
+      out: THREE.Vector3,
+      tangent: THREE.Vector3
+    ): number => {
+      setFlightControls(k, aspect, mobile);
+      const u = curveParamAt(flightTable(k, aspect, mobile), THREE.MathUtils.smoothstep(t, 0, 1));
+      bezierPoint(u, out);
+      const v = 1 - u;
+      const d0 = 3 * v * v;
+      const d1 = 6 * v * u;
+      const d2 = 3 * u * u;
+      tangent.set(
+        (flightP1.x - flightP0.x) * d0 + (flightP2.x - flightP1.x) * d1 + (flightP3.x - flightP2.x) * d2,
+        (flightP1.y - flightP0.y) * d0 + (flightP2.y - flightP1.y) * d1 + (flightP3.y - flightP2.y) * d2,
+        (flightP1.z - flightP0.z) * d0 + (flightP2.z - flightP1.z) * d1 + (flightP3.z - flightP2.z) * d2
+      );
+      // Heading follow peaks mid-flight and vanishes at both settles
+      return 4 * t * (1 - t);
+    };
+
+    // Solo label: beside (below, else above) the projected body, never across it
+    const LABEL_WIDTH = 250;
+    const LABEL_HEIGHT = 36;
+    const LABEL_GAP = 18;
+    const LABEL_TOP_SAFE = 80;
+    const placeLabel = (
+      placement: StationRig['label'],
+      cx: number,
+      cy: number,
+      radiusPx: number,
+      w: number,
+      h: number,
+      mobile: boolean
+    ): { left: number; top: number } => {
+      const edge = mobile ? 20 : 40;
+      const corner = { left: edge, top: h - (mobile ? 32 : 48) - LABEL_HEIGHT };
+      if (placement === 'corner') return corner;
+      const left = THREE.MathUtils.clamp(cx - radiusPx * 0.5, edge, Math.max(edge, w - LABEL_WIDTH - edge));
+      const below = cy + radiusPx + LABEL_GAP;
+      if (below + LABEL_HEIGHT <= h - (mobile ? 24 : 36)) return { left, top: below };
+      const above = cy - radiusPx - LABEL_GAP - LABEL_HEIGHT;
+      if (above >= LABEL_TOP_SAFE) return { left, top: above };
+      return corner;
+    };
+
+    // ==========================================================================
+    // 11. Interaction & 60fps Damped Animation Loop
     // ==========================================================================
     let targetMouseX = 0;
     let targetMouseY = 0;
@@ -1545,6 +1874,8 @@
 
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      // Framings depend on aspect: rebuild flight speed tables for the new viewport shape
+      flightTables.clear();
 
       renderer.setPixelRatio(pr);
       renderer.setSize(w, h, false);
@@ -1560,58 +1891,23 @@
 
     let smoothScroll = targetScrollProgress;
     let smoothChapter = targetChapterIndex;
+    let smoothJourney = THREE.MathUtils.clamp(targetJourney, 0, MAX_JOURNEY);
+    let smoothLabelOpacity = targetLabelOpacity;
     let smoothWarpVelocity = 0;
     let animationFrameId = 0;
     let isIntersecting = true;
     const startTime = performance.now();
     let prevTime = startTime;
     const projVec = new THREE.Vector3();
-    const ringNormalWorld = new THREE.Vector3();
-
-    // Helper for planetary flyby kinematics:
-    // t in [0, 1] across [pStart, pEnd], peaking near camera at t ~ 0.62
-    function evaluateFlyby(
-      p: number,
-      pStart: number,
-      pPeak: number,
-      pEnd: number
-    ): { active: boolean; u: number; z: number; opacity: number; phaseShift: number } {
-      if (p < pStart || p > pEnd) {
-        return { active: false, u: 0, z: -120, opacity: 0, phaseShift: 0 };
-      }
-      const fadeIn = THREE.MathUtils.smoothstep(p, pStart, pStart + (pPeak - pStart) * 0.32);
-      const fadeOut = 1.0 - THREE.MathUtils.smoothstep(p, pPeak + (pEnd - pPeak) * 0.45, pEnd);
-      const opacity = fadeIn * fadeOut;
-
-      let z: number;
-      let u: number;
-      if (p <= pPeak) {
-        const tApproach = (p - pStart) / Math.max(1e-5, pPeak - pStart);
-        // Nonlinear approach: starts far in deep space (-82), accelerates as camera closes in to z = +4.2
-        const curved = Math.pow(tApproach, 1.35);
-        z = THREE.MathUtils.lerp(-82.0, 4.2, curved);
-        u = tApproach * 0.62;
-      } else {
-        const tPass = (p - pPeak) / Math.max(1e-5, pEnd - pPeak);
-        // Sweeps past the camera lens from +4.2 to +16.5
-        z = THREE.MathUtils.lerp(4.2, 16.5, Math.pow(tPass, 0.92));
-        u = 0.62 + tPass * 0.38;
-      }
-      // Solar phase shifts from sunlit gibbous on approach (+0.65) to dramatic crescent as we pass (-0.45)
-      const phaseShift = THREE.MathUtils.lerp(0.68, -0.48, u);
-      return { active: opacity > 0.004, u, z, opacity, phaseShift };
-    }
-
-    function projectToScreen(worldPos: THREE.Vector3): { x: number; y: number; inFront: boolean } {
-      projVec.copy(worldPos).project(camera);
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      return {
-        x: (projVec.x * 0.5 + 0.5) * w,
-        y: (-projVec.y * 0.5 + 0.5) * h,
-        inFront: projVec.z < 1.0 && projVec.z > -1.0
-      };
-    }
+    const cameraRight = new THREE.Vector3();
+    const rigPose = new THREE.Vector3();
+    const flightTangent = new THREE.Vector3();
+    const prevRigPose = new THREE.Vector3();
+    let hasPrevRigPose = false;
+    const journeyStartZ = framePose(STATION_RIGS[0], RIG_DEFS.earth.desktop[0], 1, new THREE.Vector3()).z;
+    /** Slow spin of waypoint k, scrubbed by the journey and centred on its hold. */
+    const observeSpin = (k: number): number =>
+      THREE.MathUtils.clamp(smoothJourney - 2 * k - 0.5, -3, 3) * OBSERVE_SPIN_RATE;
 
     const renderLoop = (now: number) => {
       if (document.hidden || !isIntersecting) {
@@ -1635,34 +1931,60 @@
           : Math.max(earthArrivalTarget, earthArrivalLinear - step);
       }
       // Quintic smootherstep: the finale's smoothstep easing with a softer launch and settle
-      const earthArrival =
-        earthArrivalLinear * earthArrivalLinear * earthArrivalLinear *
-        (earthArrivalLinear * (earthArrivalLinear * 6.0 - 15.0) + 10.0);
+      const earthArrival = smootherstep01(earthArrivalLinear);
       const earthArrivalRise = prefersReducedMotion ? 0 : 1.0 - earthArrival;
 
-      const prevSmoothScroll = smoothScroll;
       const scrollJump = Math.abs(targetScrollProgress - smoothScroll);
       const lerpFactor = scrollJump > 0.12 ? 0.35 : 0.085;
       smoothScroll += (targetScrollProgress - smoothScroll) * lerpFactor;
       smoothChapter += (targetChapterIndex - smoothChapter) * 0.085;
-      const rawVelocity = dt > 0.0001 ? (smoothScroll - prevSmoothScroll) / dt : 0;
-      const targetWarp = THREE.MathUtils.clamp(rawVelocity * 4.5, -1.0, 1.0);
-      smoothWarpVelocity += (targetWarp - smoothWarpVelocity) * 0.08;
+
+      const damping = 1.0 - Math.exp(-dt * JOURNEY_DAMPING);
+      smoothJourney += (THREE.MathUtils.clamp(targetJourney, 0, MAX_JOURNEY) - smoothJourney) * damping;
+      smoothLabelOpacity += (targetLabelOpacity - smoothLabelOpacity) * damping;
 
       smoothMouseX += (targetMouseX - smoothMouseX) * 0.05;
       smoothMouseY += (targetMouseY - smoothMouseY) * 0.05;
 
       const isMobileNow = window.innerWidth < 768;
-      const xSpreadScale = isMobileNow ? 0.52 : 1.0;
+      const aspect = camera.aspect;
 
-      // Camera flight kinematics
-      const cameraRigOffsetX = smoothMouseX * 0.42;
-      const cameraRigOffsetY = smoothMouseY * 0.28;
-      camera.position.set(cameraRigOffsetX, cameraRigOffsetY, 12.0 - earthArrivalRise * CAMERA_ARRIVAL_PUSH_IN);
+      // ----------------------------------------------------------------------
+      // Camera: hold drift on waypoint k over [2k, 2k+1], flight k → k+1 over [2k+1, 2k+2]
+      // ----------------------------------------------------------------------
+      const station = Math.min(Math.floor(smoothJourney / 2), STATION_RIGS.length - 1);
+      const local = smoothJourney - station * 2;
+      let headingWeight = 0;
+      if (local <= 1 || station >= STATION_RIGS.length - 1) {
+        holdPose(station, Math.min(local, 1), aspect, isMobileNow, rigPose);
+      } else {
+        headingWeight = flightPose(station, local - 1, aspect, isMobileNow, rigPose, flightTangent);
+      }
+
+      const rigSpeed = hasPrevRigPose && dt > 0.0001 ? rigPose.distanceTo(prevRigPose) / dt : 0;
+      prevRigPose.copy(rigPose);
+      hasPrevRigPose = true;
+      const targetWarp = THREE.MathUtils.clamp(rigSpeed * WARP_SPEED_SCALE, 0, 1.0);
+      smoothWarpVelocity += (targetWarp - smoothWarpVelocity) * 0.08;
+
+      let flightYaw = 0;
+      let flightPitch = 0;
+      if (headingWeight > 0.0001 && flightTangent.lengthSq() > 1e-6 && !prefersReducedMotion) {
+        const horizontal = Math.hypot(flightTangent.x, flightTangent.z);
+        const follow = FLIGHT_HEADING_FOLLOW * headingWeight * (isMobileNow ? 0.6 : 1.0);
+        flightYaw = Math.atan2(-flightTangent.x, -flightTangent.z) * follow;
+        flightPitch = Math.atan2(flightTangent.y, horizontal) * follow * 0.8;
+      }
+
+      camera.position.set(
+        rigPose.x + smoothMouseX * 0.42,
+        rigPose.y + smoothMouseY * 0.28,
+        rigPose.z - earthArrivalRise * CAMERA_ARRIVAL_PUSH_IN
+      );
       camera.rotation.set(
-        smoothMouseY * 0.022 - smoothScroll * 0.025,
-        -smoothMouseX * 0.03 + Math.sin(smoothScroll * Math.PI * 1.5) * 0.028,
-        Math.sin(smoothScroll * Math.PI * 2.0) * 0.014
+        smoothMouseY * 0.022 + flightPitch,
+        -smoothMouseX * 0.03 + flightYaw,
+        flightYaw * FLIGHT_BANK
       );
       camera.updateMatrixWorld();
 
@@ -1674,285 +1996,135 @@
       nebulaUniforms.uMouse.value.set(smoothMouseX, smoothMouseY);
       nebulaUniforms.uWarpSpeed.value = Math.abs(smoothWarpVelocity);
 
+      // Star shells ride with the camera; forward travel scrolls them past at parallax rates
+      starPoints.position.set(
+        camera.position.x * 0.92,
+        camera.position.y * 0.92,
+        camera.position.z - STAR_SHELL_LEAD
+      );
       starUniforms.uTime.value = elapsed;
       starUniforms.uTravelZ.value =
-        smoothScroll * 460.0 + (prefersReducedMotion ? 0 : elapsed * STAR_IDLE_DRIFT_PER_SECOND);
+        (journeyStartZ - rigPose.z) * STAR_TRAVEL_RATIO +
+        (prefersReducedMotion ? 0 : elapsed * STAR_IDLE_DRIFT_PER_SECOND);
       starUniforms.uWarpVelocity.value = smoothWarpVelocity;
 
-      let candidateHud: WaypointHudState | null = null;
-
       // ----------------------------------------------------------------------
-      // WAYPOINT 1: EARTH (0.00 -> 0.095) — Commanding LEO Presence at Start
+      // Bodies: fixed in world space; only distance dims them
       // ----------------------------------------------------------------------
-      const earthT = THREE.MathUtils.clamp(smoothScroll / 0.095, 0, 1);
-      const earthOpacity =
-        (1.0 - THREE.MathUtils.smoothstep(smoothScroll, 0.06, 0.095)) *
-        THREE.MathUtils.smoothstep(earthArrival, 0.0, 0.55);
-      if (earthOpacity > 0.004) {
-        const earthX = THREE.MathUtils.lerp(isMobileNow ? 1.2 : 3.2, isMobileNow ? 2.4 : 6.4, Math.pow(earthT, 0.85));
-        const earthY =
-          THREE.MathUtils.lerp(isMobileNow ? -1.8 : -1.3, -6.5, Math.pow(earthT, 0.9)) -
-          earthArrivalRise * EARTH_ARRIVAL_DROP;
-        const earthZ = THREE.MathUtils.lerp(isMobileNow ? 3.2 : 4.6, -54.0, Math.pow(earthT, 1.15));
-        earthGroup.position.set(earthX, earthY, earthZ);
-
-        const earthScale = THREE.MathUtils.lerp(1.0, 0.22, Math.pow(earthT, 0.8));
-        earthSurfaceMesh.scale.setScalar(earthScale);
-        atmosphereMesh.scale.setScalar(earthScale);
+      const earthDistance = camera.position.distanceTo(RIG_DEFS.earth.center);
+      const earthOpacity = THREE.MathUtils.smoothstep(earthArrival, 0.0, 0.55) * bodyFade(earthDistance);
+      earthGroup.visible = earthOpacity > 0.004;
+      if (earthGroup.visible) {
+        earthGroup.position.set(0, -earthArrivalRise * EARTH_ARRIVAL_DROP, 0);
         earthSurfaceMesh.rotation.y = -1.15 + earthArrivalRise * EARTH_ARRIVAL_SPIN;
-
+        const paleBlueDotMix = THREE.MathUtils.smoothstep(earthDistance, PALE_BLUE_DOT_NEAR, PALE_BLUE_DOT_FAR);
         earthSurfaceUniforms.uTime.value = elapsed;
         earthSurfaceUniforms.uOpacity.value = earthOpacity;
-        earthSurfaceUniforms.uPaleBlueDotMix.value = THREE.MathUtils.smoothstep(smoothScroll, 0.06, 0.095);
-
+        earthSurfaceUniforms.uPaleBlueDotMix.value = paleBlueDotMix;
         atmosphereUniforms.uTime.value = elapsed;
         atmosphereUniforms.uOpacity.value = earthOpacity;
-        atmosphereUniforms.uPaleBlueDotMix.value = earthSurfaceUniforms.uPaleBlueDotMix.value;
-
-        earthGroup.visible = true;
-
-        if (earthOpacity > 0.25) {
-          const anchor = projectToScreen(
-            new THREE.Vector3(earthX - 2.6 * earthScale, earthY + 2.8 * earthScale, earthZ)
-          );
-          if (anchor.inFront) {
-            candidateHud = {
-              id: 'earth',
-              name: 'TERRA · 1.00 AU',
-              distanceLabel: smoothScroll < 0.04 ? '222 KM LOW EARTH ORBIT' : 'CISLUNAR DEPARTURE',
-              missionNote: 'APOLLO–SOYUZ // ISS OUTPOST',
-              screenX: Math.min(window.innerWidth - 180, Math.max(24, anchor.x)),
-              screenY: Math.min(window.innerHeight - 80, Math.max(76, anchor.y)),
-              opacity: earthOpacity * 0.82,
-              alignRight: false
-            };
-          }
-        }
-      } else {
-        earthGroup.visible = false;
+        atmosphereUniforms.uPaleBlueDotMix.value = paleBlueDotMix;
       }
 
-      // ----------------------------------------------------------------------
-      // WAYPOINT 2: MARS (0.045 -> 0.175, Peak @ 0.103 — Prologue / Viking)
-      // Positioned on UPPER-LEFT to pair with Prologue's Right-Side Plate
-      // ----------------------------------------------------------------------
-      const marsFly = evaluateFlyby(smoothScroll, 0.045, 0.103, 0.175);
-      if (marsFly.active) {
-        const mx = THREE.MathUtils.lerp(-2.6, -4.6, marsFly.u) * xSpreadScale;
-        const my = THREE.MathUtils.lerp(2.4, 2.0, marsFly.u);
-        marsGroup.position.set(mx, my, marsFly.z);
-        marsMesh.rotation.y = elapsed * 0.08 + smoothScroll * 6.0;
-        marsUniforms.uOpacity.value = marsFly.opacity;
-        marsUniforms.uSunDirection.value.set(0.75, 0.24, marsFly.phaseShift).normalize();
-        marsGroup.visible = true;
-
-        if (marsFly.opacity > (candidateHud?.opacity ?? 0.15)) {
-          const anchor = projectToScreen(new THREE.Vector3(mx + 1.9, my + 0.8, marsFly.z));
-          if (anchor.inFront) {
-            candidateHud = {
-              id: 'mars',
-              name: 'MARS · 1.52 AU',
-              distanceLabel: '227.9M KM · 12M 40S OWLT',
-              missionNote: 'VIKING 1 & 2 // PERSEVERANCE',
-              screenX: Math.min(window.innerWidth - 190, Math.max(24, anchor.x)),
-              screenY: Math.min(window.innerHeight - 80, Math.max(72, anchor.y)),
-              opacity: marsFly.opacity * 0.88,
-              alignRight: false
-            };
-          }
-        }
-      } else {
-        marsGroup.visible = false;
+      const marsOpacity = bodyFade(camera.position.distanceTo(marsGroup.position));
+      marsGroup.visible = marsOpacity > 0.004;
+      if (marsGroup.visible) {
+        marsMesh.rotation.y = MARS_FACE_YAW + observeSpin(1);
+        marsUniforms.uOpacity.value = marsOpacity;
       }
 
-      // ----------------------------------------------------------------------
-      // WAYPOINT 3: JUPITER (0.135 -> 0.270, Peak @ 0.199 — Ch. I / Voyager)
-      // Positioned on UPPER-RIGHT to pair with Chapter I's Left-Side Plate
-      // ----------------------------------------------------------------------
-      const jupiterFly = evaluateFlyby(smoothScroll, 0.135, 0.199, 0.270);
-      if (jupiterFly.active) {
-        const jx = THREE.MathUtils.lerp(2.8, 5.2, jupiterFly.u) * xSpreadScale;
-        const jy = THREE.MathUtils.lerp(2.4, 1.9, jupiterFly.u);
-        jupiterGroup.position.set(jx, jy, jupiterFly.z);
-        jupiterMesh.rotation.y = 0.65 + elapsed * 0.11 + (jupiterFly.u - 0.5) * 1.1;
-        jupiterUniforms.uOpacity.value = jupiterFly.opacity;
-        jupiterUniforms.uSunDirection.value.set(-0.75, 0.22, jupiterFly.phaseShift).normalize();
-        europaMat.opacity = jupiterFly.opacity * 0.85;
-        jupiterGroup.visible = true;
-
-        if (jupiterFly.opacity > (candidateHud?.opacity ?? 0.15)) {
-          const anchor = projectToScreen(new THREE.Vector3(jx - 3.2, jy + 0.6, jupiterFly.z));
-          if (anchor.inFront) {
-            candidateHud = {
-              id: 'jupiter',
-              name: 'JUPITER · 5.20 AU',
-              distanceLabel: '778.5M KM · 43M 16S OWLT',
-              missionNote: 'VOYAGER GRAVITY ASSIST (+10.5 KM/S)',
-              screenX: Math.min(window.innerWidth - 240, Math.max(24, anchor.x)),
-              screenY: Math.min(window.innerHeight - 80, Math.max(72, anchor.y)),
-              opacity: jupiterFly.opacity * 0.88,
-              alignRight: true
-            };
-          }
-        }
-      } else {
-        jupiterGroup.visible = false;
+      const jupiterOpacity = bodyFade(camera.position.distanceTo(jupiterGroup.position));
+      jupiterGroup.visible = jupiterOpacity > 0.004;
+      if (jupiterGroup.visible) {
+        jupiterMesh.rotation.y = JUPITER_FACE_YAW + observeSpin(2);
+        jupiterUniforms.uOpacity.value = jupiterOpacity;
+        europaMat.opacity = jupiterOpacity * 0.85;
       }
 
-      // ----------------------------------------------------------------------
-      // WAYPOINT 4: SATURN & RINGS (0.235 -> 0.365, Peak @ 0.296 — Ch. II / Cassini)
-      // Positioned on UPPER-LEFT to pair with Chapter II's Right-Side Plate
-      // ----------------------------------------------------------------------
-      const saturnFly = evaluateFlyby(smoothScroll, 0.235, 0.296, 0.365);
-      if (saturnFly.active) {
-        const sx = THREE.MathUtils.lerp(-2.8, -5.0, saturnFly.u) * xSpreadScale;
-        const sy = THREE.MathUtils.lerp(2.4, 2.0, saturnFly.u);
-        const sz = saturnFly.z - 0.8;
-        saturnGroup.position.set(sx, sy, sz);
-        saturnBodyMesh.rotation.y = elapsed * 0.1 + saturnFly.u * 1.4;
-
-        saturnBodyUniforms.uOpacity.value = saturnFly.opacity;
-        saturnRingUniforms.uOpacity.value = saturnFly.opacity;
-        saturnBodyUniforms.uSunDirection.value.set(0.72, 0.36, saturnFly.phaseShift).normalize();
-        saturnBodyUniforms.uPlanetCenter.value.set(sx, sy, sz);
-        saturnRingUniforms.uPlanetCenter.value.set(sx, sy, sz);
-
-        ringNormalWorld.set(0, 1, 0).applyQuaternion(saturnTiltGroup.quaternion).normalize();
-        saturnBodyUniforms.uRingNormal.value.copy(ringNormalWorld);
-        saturnGroup.visible = true;
-
-        if (saturnFly.opacity > (candidateHud?.opacity ?? 0.15)) {
-          const anchor = projectToScreen(new THREE.Vector3(sx + 3.0, sy + 0.6, sz));
-          if (anchor.inFront) {
-            candidateHud = {
-              id: 'saturn',
-              name: 'SATURN · 9.54 AU',
-              distanceLabel: '1.43B KM · 1H 19M OWLT',
-              missionNote: 'CASSINI–HUYGENS // RING SYSTEM',
-              screenX: Math.min(window.innerWidth - 220, Math.max(24, anchor.x)),
-              screenY: Math.min(window.innerHeight - 80, Math.max(72, anchor.y)),
-              opacity: saturnFly.opacity * 0.88,
-              alignRight: false
-            };
-          }
-        }
-      } else {
-        saturnGroup.visible = false;
+      const saturnOpacity = bodyFade(camera.position.distanceTo(saturnGroup.position));
+      saturnGroup.visible = saturnOpacity > 0.004;
+      if (saturnGroup.visible) {
+        saturnBodyMesh.rotation.y = SATURN_FACE_YAW + observeSpin(3);
+        saturnBodyUniforms.uOpacity.value = saturnOpacity;
+        saturnRingUniforms.uOpacity.value = saturnOpacity;
       }
 
-      // ----------------------------------------------------------------------
-      // WAYPOINT 5: PLUTO & CHARON (0.330 -> 0.465, Peak @ 0.392 — Ch. III / New Horizons)
-      // Positioned on UPPER-RIGHT to pair with Chapter III's Left-Side Plate
-      // ----------------------------------------------------------------------
-      const plutoFly = evaluateFlyby(smoothScroll, 0.330, 0.392, 0.465);
-      if (plutoFly.active) {
-        const px = THREE.MathUtils.lerp(2.6, 4.6, plutoFly.u) * xSpreadScale;
-        const py = THREE.MathUtils.lerp(2.3, 1.85, plutoFly.u);
-        plutoGroup.position.set(px, py, plutoFly.z + 1.0);
-        plutoMesh.rotation.y = -0.8 + elapsed * 0.05 + (plutoFly.u - 0.5) * 0.8;
-        charonMesh.rotation.y = plutoMesh.rotation.y;
-
-        plutoUniforms.uOpacity.value = plutoFly.opacity;
-        charonUniforms.uOpacity.value = plutoFly.opacity * 0.92;
-        plutoUniforms.uSunDirection.value.set(-0.68, 0.25, plutoFly.phaseShift).normalize();
-        plutoGroup.visible = true;
-
-        if (plutoFly.opacity > (candidateHud?.opacity ?? 0.15)) {
-          const anchor = projectToScreen(new THREE.Vector3(px - 2.2, py + 0.6, plutoFly.z + 1.0));
-          if (anchor.inFront) {
-            candidateHud = {
-              id: 'pluto',
-              name: 'PLUTO & CHARON · 39.5 AU',
-              distanceLabel: '5.91B KM · 5H 28M OWLT',
-              missionNote: 'NEW HORIZONS // KUIPER BELT',
-              screenX: Math.min(window.innerWidth - 230, Math.max(24, anchor.x)),
-              screenY: Math.min(window.innerHeight - 80, Math.max(72, anchor.y)),
-              opacity: plutoFly.opacity * 0.88,
-              alignRight: true
-            };
-          }
-        }
-      } else {
-        plutoGroup.visible = false;
+      const plutoOpacity = bodyFade(camera.position.distanceTo(plutoGroup.position));
+      plutoGroup.visible = plutoOpacity > 0.004;
+      if (plutoGroup.visible) {
+        plutoMesh.rotation.y = PLUTO_FACE_YAW + observeSpin(4);
+        charonMesh.rotation.y = CHARON_FACE_YAW + observeSpin(4);
+        plutoUniforms.uOpacity.value = plutoOpacity;
+        charonUniforms.uOpacity.value = plutoOpacity * 0.92;
       }
 
-      // ----------------------------------------------------------------------
-      // WAYPOINT 6: HELIOPAUSE BOW-WAVE CROSSING (0.43 -> 0.565, Peak @ 0.489 — Ch. IV)
-      // ----------------------------------------------------------------------
-      const helioEnv =
-        THREE.MathUtils.smoothstep(smoothScroll, 0.43, 0.475) *
-        (1.0 - THREE.MathUtils.smoothstep(smoothScroll, 0.52, 0.565));
-      if (helioEnv > 0.004) {
-        const helioT = (smoothScroll - 0.43) / 0.135;
-        heliopauseMesh.position.set(0, 0, THREE.MathUtils.lerp(-42.0, 22.0, helioT));
+      // Heliopause sheath: a diffuse plasma boundary, only visible once the camera is close; its
+      // open centre lets the camera fly through
+      const helioIntensity =
+        1.0 - THREE.MathUtils.smoothstep(camera.position.distanceTo(heliopauseMesh.position), 75.0, 125.0);
+      heliopauseMesh.visible = helioIntensity > 0.004;
+      if (heliopauseMesh.visible) {
         heliopauseUniforms.uTime.value = elapsed;
-        heliopauseUniforms.uIntensity.value = helioEnv;
-        heliopauseMesh.visible = true;
-
-        if (helioEnv > (candidateHud?.opacity ?? 0.15)) {
-          candidateHud = {
-            id: 'heliopause',
-            name: 'HELIOPAUSE · 121.6 AU',
-            distanceLabel: '18.19B KM · 16H 51M OWLT',
-            missionNote: 'SOLAR WIND TERMINUS // INTERSTELLAR MEDIUM',
-            screenX: isMobileNow ? 24 : window.innerWidth * 0.14,
-            screenY: window.innerHeight * 0.14,
-            opacity: helioEnv * 0.85,
-            alignRight: false
-          };
-        }
-      } else {
-        heliopauseMesh.visible = false;
+        heliopauseUniforms.uIntensity.value = helioIntensity;
       }
 
-      // ----------------------------------------------------------------------
-      // WAYPOINT 7: INTERSTELLAR SPACE & DISTANT SOL PINPOINT (0.54 -> 0.77)
-      // Fades out cleanly as FinalePullBack takes over at scrollProgress >= 0.77
-      // ----------------------------------------------------------------------
-      const solPinpointEnv =
-        THREE.MathUtils.smoothstep(smoothScroll, 0.54, 0.58) *
-        (1.0 - THREE.MathUtils.smoothstep(smoothScroll, 0.73, 0.775));
-      if (solPinpointEnv > 0.004) {
-        const solT = THREE.MathUtils.clamp((smoothScroll - 0.54) / 0.22, 0, 1);
-        const sx = THREE.MathUtils.lerp(2.8, -2.6, solT) * xSpreadScale;
-        const sy = THREE.MathUtils.lerp(1.8, 1.6, solT);
-        paleBlueDotMesh.position.set(sx, sy, -16.0);
+      // Distant Sol pinpoint beyond the heliopause
+      const solIntensity =
+        0.85 *
+        (1.0 - THREE.MathUtils.smoothstep(camera.position.distanceTo(paleBlueDotMesh.position), 120.0, 260.0));
+      paleBlueDotMesh.visible = solIntensity > 0.004;
+      if (paleBlueDotMesh.visible) {
         paleBlueDotMesh.quaternion.copy(camera.quaternion);
         paleBlueDotUniforms.uTime.value = elapsed;
-        paleBlueDotUniforms.uIntensity.value = solPinpointEnv * 0.85;
-        paleBlueDotMesh.visible = true;
-
-        if (solPinpointEnv > (candidateHud?.opacity ?? 0.15) && smoothScroll < 0.75) {
-          const anchor = projectToScreen(new THREE.Vector3(sx + 0.8, sy + 0.8, -16.0));
-          if (anchor.inFront) {
-            candidateHud = {
-              id: 'interstellar-sol',
-              name: smoothScroll < 0.67 ? 'INTERSTELLAR MEDIUM · 169.8 AU' : 'CENTENNIAL HORIZON · 340.0 AU',
-              distanceLabel: smoothScroll < 0.67 ? '25.4B KM · 23H 34M OWLT' : '50.9B KM · 47H 08M OWLT',
-              missionNote: 'LOOKING BACK AT SOL & EARTH',
-              screenX: Math.min(window.innerWidth - 210, Math.max(24, anchor.x)),
-              screenY: Math.min(window.innerHeight - 80, Math.max(76, anchor.y)),
-              opacity: solPinpointEnv * 0.82,
-              alignRight: false
-            };
-          }
-        }
-      } else {
-        paleBlueDotMesh.visible = false;
+        paleBlueDotUniforms.uIntensity.value = solIntensity;
       }
 
-      activeWaypointHud = candidateHud;
-
-      // Voyager 1 Trajectory Filament
-      const trajectoryScrollOffsetZ = smoothScroll * 135.0;
+      // Voyager 1 trajectory filament: departs Earth and retires once Earth falls behind
       trajectoryGroup.position.set(
-        -smoothMouseX * 0.28,
-        -smoothMouseY * 0.20 - smoothScroll * 11.5,
-        trajectoryScrollOffsetZ
+        TRAJECTORY_ANCHOR.x - smoothMouseX * 0.28,
+        TRAJECTORY_ANCHOR.y - smoothMouseY * 0.2,
+        TRAJECTORY_ANCHOR.z
       );
       trajectoryUniforms.uTime.value = elapsed;
       trajectoryUniforms.uScrollProgress.value = smoothScroll;
-      trajectoryUniforms.uOpacity.value = earthArrival;
+      trajectoryUniforms.uOpacity.value =
+        earthArrival * (1.0 - THREE.MathUtils.smoothstep(smoothJourney, 1.0, 1.6));
+
+      // ----------------------------------------------------------------------
+      // The single solo-beat label, placed clear of the body it names
+      // ----------------------------------------------------------------------
+      let nextLabel: WaypointLabelState | null = null;
+      if (smoothLabelOpacity > 0.02) {
+        const rig = STATION_RIGS[station];
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        projVec.copy(rig.center).project(camera);
+        if (projVec.z < 1.0) {
+          const cx = (projVec.x * 0.5 + 0.5) * w;
+          const cy = (-projVec.y * 0.5 + 0.5) * h;
+          cameraRight.setFromMatrixColumn(camera.matrixWorld, 0);
+          projVec.copy(rig.center).addScaledVector(cameraRight, rig.frameRadius).project(camera);
+          const radiusPx = Math.abs((projVec.x * 0.5 + 0.5) * w - cx);
+          const spot = placeLabel(rig.label, cx, cy, radiusPx, w, h, isMobileNow);
+          const waypoint = JOURNEY_WAYPOINTS[station];
+          nextLabel = {
+            id: waypoint.id,
+            name: waypoint.name,
+            distanceLabel: waypoint.distanceLabel,
+            left: Math.round(spot.left),
+            top: Math.round(spot.top),
+            opacity: Math.round(smoothLabelOpacity * 100) / 100
+          };
+        }
+      }
+      if (
+        nextLabel?.id !== waypointLabel?.id ||
+        nextLabel?.left !== waypointLabel?.left ||
+        nextLabel?.top !== waypointLabel?.top ||
+        nextLabel?.opacity !== waypointLabel?.opacity
+      ) {
+        waypointLabel = nextLabel;
+      }
 
       renderer.render(scene, camera);
       if (!sceneRevealed) sceneRevealed = true;
@@ -2002,6 +2174,7 @@
       mediaReducedMotion.removeEventListener('change', handleReducedMotionChange);
       unsubscribeTelemetry();
       unsubscribeIntro();
+      unsubscribeJourney();
 
       nebulaGeometry.dispose();
       nebulaMaterial.dispose();
@@ -2043,7 +2216,7 @@
   class="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none"
   aria-hidden="true"
   data-chapter-index={currentChapterIndex}
-  data-active-waypoint={activeWaypointHud?.id ?? 'starfield'}
+  data-active-waypoint={waypointLabel?.id ?? 'starfield'}
 >
   {#if !webglFailed}
     <canvas
@@ -2054,21 +2227,19 @@
 
     <!-- Waypoint callouts are HUD readouts: held back until mission control comes online -->
     <div class="intro-stage intro-slot-readout" data-intro-hidden={$introPhaseStore !== 'journey'}>
-      {#if activeWaypointHud && activeWaypointHud.opacity > 0.05}
+      {#if waypointLabel}
+        <!-- The one solo-beat label: waypoint name + distance, placed clear of the body -->
         <div
-          class="pointer-events-none fixed z-10 font-mono-tech uppercase transition-opacity duration-200"
-          data-testid={`solar-waypoint-${activeWaypointHud.id}`}
-          style={`left: ${activeWaypointHud.screenX.toFixed(0)}px; top: ${activeWaypointHud.screenY.toFixed(0)}px; opacity: ${activeWaypointHud.opacity.toFixed(3)};`}
+          class="pointer-events-none fixed z-10 whitespace-nowrap font-mono-tech uppercase"
+          data-testid={`solar-waypoint-${waypointLabel.id}`}
+          style={`left: ${waypointLabel.left}px; top: ${waypointLabel.top}px; opacity: ${waypointLabel.opacity};`}
         >
           <div class="flex items-center gap-2 text-[11px] md:text-[10px] tracking-[0.16em] text-[#C89B57] font-medium drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
             <span class="inline-block h-1.5 w-1.5 rounded-full bg-[#C89B57] shadow-[0_0_8px_#C89B57]"></span>
-            <span>{activeWaypointHud.name}</span>
+            <span>{waypointLabel.name}</span>
           </div>
           <div class="mt-0.5 pl-3.5 text-[11px] md:text-[9.5px] tracking-[0.12em] text-[#E8E6E1]/75 drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
-            {activeWaypointHud.distanceLabel}
-          </div>
-          <div class="pl-3.5 text-[11px] md:text-[9px] tracking-[0.10em] text-[#E8E6E1]/50 drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
-            {activeWaypointHud.missionNote}
+            {waypointLabel.distanceLabel}
           </div>
         </div>
       {/if}

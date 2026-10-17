@@ -1,34 +1,62 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import gsap from 'gsap';
 	import { CHAPTER_HIGHLIGHTS } from '$lib/data/highlights';
+	import {
+		journeyGapAfterChapterVh,
+		journeyWaypointForChapter,
+		syncLandingJourney
+	} from '$lib/stores/landingJourney';
+
+	interface PanelMotion {
+		/** Panel centre relative to viewport centre, in viewport heights (−1 … 1). */
+		offset: number;
+		/** Scrubbed entrance: 0 while the panel top sits at the viewport bottom, 1 once it has risen. */
+		entry: number;
+	}
+
+	const ENTRY_RISE_VIEWPORT = 0.62;
+	const STAGGER_STEP = 0.1;
+	const STAGGER_SPAN = 0.7;
 
 	let stripEl: HTMLElement | undefined = $state();
-	let beatProgress = $state<Record<string, number>>(
-		Object.fromEntries(CHAPTER_HIGHLIGHTS.map((c) => [c.chapterId, 0]))
-	);
-	let revealedChapters = $state<Record<string, boolean>>({});
+	let panelMotion = $state<Record<string, PanelMotion>>({});
+
+	const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+	const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+	/** Masked title rise, scrubbed by the panel's own entrance. */
+	function titleRise(entry: number): string {
+		return `transform: translate3d(0, ${((1 - easeOutCubic(entry)) * 102).toFixed(2)}%, 0);`;
+	}
+
+	/** Staggered slide for the copy rows; slot 0 leads. */
+	function staggerRise(entry: number, slot: number): string {
+		const t = clamp01((entry - slot * STAGGER_STEP) / STAGGER_SPAN);
+		return `transform: translate3d(0, ${((1 - easeOutCubic(t)) * 28).toFixed(1)}px, 0);`;
+	}
 
 	function syncViewportMotion() {
 		if (!stripEl || typeof window === 'undefined') return;
 		const vh = Math.max(1, window.innerHeight);
-		const cards = stripEl.querySelectorAll<HTMLElement>('[data-trailer-beat]');
-		const next: Record<string, number> = {};
-		for (const el of cards) {
-			const id = el.dataset.trailerBeat;
+		const next: Record<string, PanelMotion> = {};
+		for (const el of stripEl.querySelectorAll<HTMLElement>('[data-journey-panel]')) {
+			const id = el.dataset.chapterPanel;
 			if (!id) continue;
 			const rect = el.getBoundingClientRect();
-			const centerOffset = (rect.top + rect.height * 0.5 - vh * 0.5) / vh;
-			next[id] = Math.max(-1, Math.min(1, centerOffset));
+			next[id] = {
+				offset: Math.max(-1, Math.min(1, (rect.top + rect.height * 0.5 - vh * 0.5) / vh)),
+				entry: clamp01((vh - rect.top) / (vh * ENTRY_RISE_VIEWPORT))
+			};
 		}
-		beatProgress = next;
+		panelMotion = next;
+		syncLandingJourney();
 	}
 
 	onMount(() => {
 		if (!stripEl) return;
 
 		let rafId = 0;
-		const onScrollOrResize = () => {
+		const schedule = () => {
 			if (rafId !== 0) return;
 			rafId = window.requestAnimationFrame(() => {
 				rafId = 0;
@@ -37,57 +65,17 @@
 		};
 
 		syncViewportMotion();
-		window.addEventListener('scroll', onScrollOrResize, { passive: true });
-		window.addEventListener('resize', onScrollOrResize, { passive: true });
-
-		const observer = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					const el = entry.target as HTMLElement;
-					const id = el.dataset.trailerBeat;
-					if (entry.isIntersecting && id && !revealedChapters[id]) {
-						revealedChapters = { ...revealedChapters, [id]: true };
-						const titleEl = el.querySelector('.trailer-title-rise');
-						const items = el.querySelectorAll('.trailer-stagger-item');
-						if (titleEl) {
-							gsap.fromTo(
-								titleEl,
-								{ yPercent: 102, opacity: 0 },
-								{
-									yPercent: 0,
-									opacity: 1,
-									duration: 0.9,
-									ease: 'expo.out'
-								}
-							);
-						}
-						if (items.length > 0) {
-							gsap.fromTo(
-								items,
-								{ y: 22, opacity: 0 },
-								{
-									y: 0,
-									opacity: 1,
-									duration: 0.85,
-									stagger: 0.08,
-									ease: 'expo.out'
-								}
-							);
-						}
-					}
-				}
-			},
-			{ threshold: 0.18 }
-		);
-
-		const beatEls = stripEl.querySelectorAll<HTMLElement>('[data-trailer-beat]');
-		beatEls.forEach((el) => observer.observe(el));
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule, { passive: true });
+		// Late-loading plates and fonts move every panel below them
+		const resizeObserver = new ResizeObserver(schedule);
+		resizeObserver.observe(stripEl);
 
 		return () => {
 			if (rafId) window.cancelAnimationFrame(rafId);
-			window.removeEventListener('scroll', onScrollOrResize);
-			window.removeEventListener('resize', onScrollOrResize);
-			observer.disconnect();
+			window.removeEventListener('scroll', schedule);
+			window.removeEventListener('resize', schedule);
+			resizeObserver.disconnect();
 		};
 	});
 </script>
@@ -95,10 +83,13 @@
 <div bind:this={stripEl} id="chapter-strip" aria-label="Rapid-Fire Seven-Chapter Chronicle Strip">
 	{#each CHAPTER_HIGHLIGHTS as ch, index (ch.chapterId)}
 		{@const isTextLeft = index % 2 === 0}
-		{@const offset = beatProgress[ch.chapterId] ?? 0}
+		{@const motion = panelMotion[ch.chapterId] ?? { offset: 0, entry: 1 }}
+		{@const offset = motion.offset}
 		{@const imageTranslateY = offset * -24}
 		{@const imageScale = 1.05 + (1 - Math.min(1, Math.abs(offset))) * 0.035}
 		{@const stageTranslateY = offset * 14}
+		{@const waypoint = journeyWaypointForChapter(ch.chapterId)}
+		<!-- Panel over its waypoint, then the scene-only stretch: solo beat → flight → next panel rises -->
 		<section
 			id={ch.chapterId}
 			data-chapter-id={ch.chapterId}
@@ -106,10 +97,13 @@
 			data-trailer-beat={ch.chapterId}
 			data-layout-alignment={isTextLeft ? 'text-left-plate-right' : 'plate-left-text-right'}
 			aria-label={`${ch.chapterNumber}: ${ch.title}`}
-			class="relative min-h-[86vh] md:min-h-[94vh] w-full flex flex-col justify-center px-5 sm:px-10 lg:pl-16 lg:pr-44 py-14 md:py-20 scroll-mt-14"
+			class="relative w-full px-5 sm:px-10 lg:pl-16 lg:pr-44 scroll-mt-14"
 		>
 			<div
-				class="relative z-10 mx-auto w-full max-w-[1320px] grid grid-cols-1 md:grid-cols-12 items-center gap-7 md:gap-10 lg:gap-12 will-change-transform"
+				data-journey-panel={waypoint?.id}
+				data-chapter-panel={ch.chapterId}
+				data-testid={`chapter-panel-${ch.slug}`}
+				class="relative z-10 mx-auto w-full max-w-[1320px] grid grid-cols-1 md:grid-cols-12 items-center gap-7 md:gap-10 lg:gap-12 py-6 will-change-transform"
 				style={`transform: translate3d(0, ${stageTranslateY.toFixed(1)}px, 0);`}
 			>
 				<!-- =================================================================
@@ -191,17 +185,18 @@
 					data-testid={`chapter-copy-${ch.slug}`}
 					class="order-2 {isTextLeft ? 'md:order-1 md:col-span-5' : 'md:order-2 md:col-span-5'} relative w-full"
 				>
-					<!-- Localized Soft Scrim Behind Copy Only (Never Blocks Surrounding Space Flight) -->
+					<!-- Localized Soft Scrim Behind Copy Only (Never Blocks Surrounding Space Flight).
+					     closest-side keeps the falloff inside the box, so it never ends on a hard edge over a planet -->
 					<div
-						class="pointer-events-none absolute -inset-6 -z-10 rounded-sm"
-						style="background: radial-gradient(ellipse 85% 80% at 50% 50%, rgba(5, 6, 7, 0.84) 0%, rgba(5, 6, 7, 0.52) 64%, rgba(5, 6, 7, 0) 100%);"
+						class="pointer-events-none absolute -inset-x-12 -inset-y-16 -z-10"
+						style="background: radial-gradient(closest-side, rgba(5, 6, 7, 0.84) 0%, rgba(5, 6, 7, 0.6) 58%, rgba(5, 6, 7, 0) 100%);"
 						aria-hidden="true"
 					></div>
 
 					<!-- Chapter Number & Epoch Telemetry -->
 					<div
-						class="trailer-stagger-item flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono-tech uppercase"
-						style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.96);"
+						class="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono-tech uppercase will-change-transform"
+						style={`text-shadow: 0 1px 12px rgba(5, 6, 7, 0.96); ${staggerRise(motion.entry, 0)}`}
 					>
 						<span class="font-display text-2xl sm:text-3xl text-[#C89B57] tracking-[-0.02em]">
 							{ch.indexNumber}
@@ -224,22 +219,23 @@
 						class="mt-2 sm:mt-3 font-display font-normal text-[#F5F3EE] overflow-hidden pb-1.5 break-words"
 						style="font-size: clamp(2.25rem, 5.2vw, 4.75rem); line-height: 0.95; letter-spacing: -0.03em; text-shadow: 0 2px 28px rgba(5, 6, 7, 0.96), 0 1px 8px rgba(5, 6, 7, 0.92);"
 					>
-						<span class="trailer-title-line trailer-title-rise block">
+						<span class="block will-change-transform" style={titleRise(motion.entry)}>
 							{ch.title}
 						</span>
 					</h2>
 
 					<!-- Strictly ONE Logline Sentence -->
 					<p
-						class="trailer-stagger-item mt-3.5 sm:mt-5 max-w-[52ch] font-sans text-base sm:text-lg leading-[1.62] text-[#F2F0EC] font-normal"
-						style="text-shadow: 0 1px 14px rgba(5, 6, 7, 0.98), 0 2px 24px rgba(5, 6, 7, 0.95);"
+						class="mt-3.5 sm:mt-5 max-w-[52ch] font-sans text-base sm:text-lg leading-[1.62] text-[#F2F0EC] font-normal will-change-transform"
+						style={`text-shadow: 0 1px 14px rgba(5, 6, 7, 0.98), 0 2px 24px rgba(5, 6, 7, 0.95); ${staggerRise(motion.entry, 1)}`}
 					>
 						{ch.logline}
 					</p>
 
 					<!-- Strictly ONE Hero Stat + Enter Chapter CTA -->
 					<div
-						class="trailer-stagger-item mt-5 sm:mt-7 pt-4 sm:pt-5 border-t border-[#E8E6E1]/18 flex flex-col sm:flex-row sm:items-end justify-between gap-5"
+						class="mt-5 sm:mt-7 pt-4 sm:pt-5 border-t border-[#E8E6E1]/18 flex flex-col sm:flex-row sm:items-end justify-between gap-5 will-change-transform"
+						style={staggerRise(motion.entry, 2)}
 					>
 						<div>
 							<div
@@ -277,6 +273,20 @@
 						</div>
 					</div>
 				</div>
+			</div>
+			<div
+				class="pointer-events-none relative w-full"
+				style={`height: ${journeyGapAfterChapterVh(ch.chapterId)}vh;`}
+				data-testid={`journey-gap-${waypoint?.id ?? ch.chapterId}`}
+				aria-hidden="true"
+			>
+				{#if index === CHAPTER_HIGHLIGHTS.length - 1}
+					<!-- The deep void dims to the finale's black as its section rises -->
+					<div
+						class="absolute inset-x-0 bottom-0 h-[60vh]"
+						style="background: linear-gradient(180deg, rgba(5, 6, 7, 0) 0%, #050607 100%);"
+					></div>
+				{/if}
 			</div>
 		</section>
 	{/each}

@@ -11,6 +11,7 @@
 	} from '$lib/stores/scrollTelemetry';
 	import { CHAPTER_HIGHLIGHTS, getHighlightBySlug } from '$lib/data/highlights';
 	import { introPhaseStore } from '$lib/stores/introSequence';
+	import { journeyStore } from '$lib/stores/landingJourney';
 
 	interface RailBenchmark {
 		id: string;
@@ -247,9 +248,11 @@
 	class="intro-stage intro-slot-topbar relative z-50"
 	data-intro-hidden={introChromeHidden && !chapterMenuOpen && !telemetryDrawerOpen}
 >
+	<!-- Below md the bar wraps to two rows: an opaque backing (plus a short feathered tail) keeps
+	     scrolled hero copy from ever showing through the nav -->
 	<header
 		data-testid="top-nav-header"
-		class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-[#050607] via-[#050607]/92 to-transparent transition-opacity duration-500 {isLandingPage &&
+		class="fixed top-0 left-0 right-0 z-50 bg-[#050607] md:bg-transparent md:bg-gradient-to-b md:from-[#050607] md:via-[#050607]/92 md:to-transparent transition-opacity duration-500 {isLandingPage &&
 		$telemetryStore.inFinale &&
 		!chapterMenuOpen &&
 		!telemetryDrawerOpen
@@ -257,6 +260,10 @@
 			: 'opacity-100'}"
 		aria-label="Fifty Years Beyond Earth Navigation & Telemetry HUD"
 	>
+		<div
+			class="md:hidden pointer-events-none absolute inset-x-0 top-full h-4 bg-gradient-to-b from-[#050607] to-transparent"
+			aria-hidden="true"
+		></div>
 		<div class="mx-auto max-w-[1440px] px-3 sm:px-8 lg:px-12">
 			<div
 				class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-0.5 py-1.5 sm:py-0 min-h-11 sm:h-13 font-mono-tech text-xs tracking-[0.06em] sm:tracking-[0.16em] uppercase opacity-85 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500"
@@ -598,12 +605,15 @@
 				: 'opacity-100'}"
 			aria-label="Logarithmic Spatial Distance Scale Rail"
 		>
+			<!-- Retires during each planet-only solo beat: the waypoint label is the only text then -->
 			<div
 				class="relative flex-1 w-40 {introChromeHidden ||
 				$telemetryStore.inFinale ||
-				$telemetryStore.scrollProgress > 0.75
+				$telemetryStore.scrollProgress > 0.75 ||
+				$journeyStore.labelOpacity > 0.5
 					? 'pointer-events-none'
 					: 'pointer-events-auto'}"
+				style={`opacity: ${(1 - $journeyStore.labelOpacity).toFixed(3)};`}
 			>
 				<!-- 1px Vertical Hairline Spine -->
 				<div class="absolute right-0 top-0 bottom-0 w-px bg-[#E8E6E1]/14"></div>

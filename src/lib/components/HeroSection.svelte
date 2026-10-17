@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { telemetryStore, scrollToSection } from '$lib/stores/scrollTelemetry';
+	import { scrollToSection } from '$lib/stores/scrollTelemetry';
 	import { introPhaseStore, startIntroSequence } from '$lib/stores/introSequence';
 
 	// Exact UTC timestamp of Apollo-Soyuz orbital docking & handshake: July 17, 1975 16:09:00 UTC
@@ -38,9 +38,11 @@
 
 	let missionClock = $state<MissionClock>(computeMissionElapsed(Date.now()));
 
-	// Subtle scroll-reactive parallax and fade over the 3D Rayleigh Earth horizon
-	const heroParallaxY = $derived(Math.min(180, $telemetryStore.scrollProgress * 650));
-	const heroOpacity = $derived(Math.max(0, 1 - $telemetryStore.scrollProgress * 5.2));
+	// Subtle scroll-reactive parallax and fade over the 3D Rayleigh Earth horizon, in viewport heights
+	// scrolled (not whole-page progress, so the landing flight's length never retimes the hero)
+	let heroScrollViewports = $state(0);
+	const heroParallaxY = $derived(Math.min(180, heroScrollViewports * 66));
+	const heroOpacity = $derived(Math.max(0, 1 - heroScrollViewports * 0.53));
 
 	// Intro staging: Earth (and its archival airglow) arrives on departure; chrome waits for the journey
 	const earthArrived = $derived($introPhaseStore !== 'void');
@@ -52,21 +54,36 @@
 			missionClock = computeMissionElapsed(Date.now());
 		}, 1000);
 
+		let rafId = 0;
+		const syncHeroScroll = () => {
+			rafId = 0;
+			heroScrollViewports = window.scrollY / Math.max(1, window.innerHeight);
+		};
+		const scheduleHeroScroll = () => {
+			if (rafId === 0) rafId = window.requestAnimationFrame(syncHeroScroll);
+		};
+		syncHeroScroll();
+		window.addEventListener('scroll', scheduleHeroScroll, { passive: true });
+		window.addEventListener('resize', scheduleHeroScroll, { passive: true });
+
 		return () => {
 			stopIntroSequence();
 			window.clearInterval(clockInterval);
+			if (rafId !== 0) window.cancelAnimationFrame(rafId);
+			window.removeEventListener('scroll', scheduleHeroScroll);
+			window.removeEventListener('resize', scheduleHeroScroll);
 		};
 	});
 </script>
 
 <section
 	id="hero"
-	class="relative min-h-svh md:min-h-screen w-full overflow-hidden pt-16 pb-8 md:pt-28 md:pb-16 flex flex-col justify-between"
+	class="relative min-h-svh md:min-h-screen w-full overflow-hidden pt-20 pb-8 md:pt-28 md:pb-16 flex flex-col justify-between"
 	aria-label="Fifty Years Beyond Earth Hero Opener"
 >
 	<!-- Subtle Archival Airglow Whisper + Localized Left Scrim — arrives with Earth on departure -->
 	<div
-		class="intro-arrival pointer-events-none absolute inset-0 z-0 overflow-hidden"
+		class="intro-arrival hero-airglow pointer-events-none absolute inset-0 z-0 overflow-hidden"
 		data-arrived={earthArrived}
 		aria-hidden="true"
 	>
@@ -222,6 +239,12 @@
 		100% {
 			transform: scale(1.08) translate3d(-1.2%, -0.8%, 0);
 		}
+	}
+
+	/* The airglow plate feathers into the scene below instead of ending on a hard edge */
+	.hero-airglow {
+		-webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+		mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
 	}
 
 	.hero-ken-burns {
