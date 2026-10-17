@@ -13,7 +13,8 @@
    - On mobile (`< 768px`), render readout panels **below** the 3D scene rather than overlapping the canvas.
 3. **The landing intro is staged like the finale** (`src/lib/stores/introSequence.ts`, identical on mobile):
    - **State 0 (`void`)** — before any scroll: drifting starfield + title (eyebrow a beat later) only. No top bar, rail, HUD readouts, waypoint callouts, subcopy, stats, CTA, Earth, or airglow plate.
-   - **State 1 (`departure`)** — first scroll: the departure cue resolves and dissolves while Earth rises into frame as the camera eases back. Chrome stays hidden.
+   - **State 1 (`departure`)** — first downward wheel/swipe/key at the top: the departure cue resolves and dissolves while Earth rises into frame as the camera eases back. Chrome stays hidden.
+   - **Scroll is held at the top** from departure until the last stagger slot has faded in; only then may the page move on to the first chapter (gestures over the top bar and in text inputs pass through; scrollbar drags and jumps fall back to scroll-position staging).
    - **State 2 (`journey`)** — departure resolved: chrome staggers in (top bar → readouts → rail → subcopy → CTA → stats) via `.intro-stage` + `.intro-slot-*` in `app.css`.
    - Returning to the very top reverses the sequence (chrome retires in mirrored order; title and stars remain). New landing chrome must join a stagger slot rather than appear at load.
 
