@@ -185,6 +185,80 @@ body {
 	}
 }
 
+/* ==========================================================================
+   Landing Intro Choreography (State 0 void → State 1 departure → State 2 journey)
+   `data-intro-hidden="true"` holds an element back until mission control comes
+   online. Each slot's --intro-out mirrors its --intro-in, so scrolling back to
+   the very top retires the chrome in reverse order. Plain `.intro-stage` never
+   sets a transform, so it is safe around position: fixed chrome.
+   ========================================================================== */
+.intro-stage {
+	transition: opacity 1s var(--ease-out-quint) var(--intro-in, 0ms);
+}
+
+.intro-stage[data-intro-hidden='true'] {
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.6s var(--ease-in-out-cubic) var(--intro-out, 0ms);
+}
+
+.intro-stage--rise {
+	transition:
+		opacity 1s var(--ease-out-quint) var(--intro-in, 0ms),
+		transform 1.2s var(--ease-out-quint) var(--intro-in, 0ms);
+}
+
+.intro-stage--rise[data-intro-hidden='true'] {
+	transform: translate3d(0, 14px, 0);
+	transition:
+		opacity 0.6s var(--ease-in-out-cubic) var(--intro-out, 0ms),
+		transform 0.6s var(--ease-in-out-cubic) var(--intro-out, 0ms);
+}
+
+/* Keyboard focus reaching held-back chrome reveals it at once */
+.intro-stage[data-intro-hidden='true']:focus-within {
+	opacity: 1;
+	transform: none;
+	pointer-events: auto;
+	transition-delay: 0ms;
+}
+
+.intro-slot-topbar {
+	--intro-in: 0ms;
+	--intro-out: 600ms;
+}
+
+.intro-slot-readout {
+	--intro-in: 260ms;
+	--intro-out: 450ms;
+}
+
+.intro-slot-rail {
+	--intro-in: 520ms;
+	--intro-out: 300ms;
+}
+
+.intro-slot-subcopy {
+	--intro-in: 800ms;
+	--intro-out: 160ms;
+}
+
+.intro-slot-action {
+	--intro-in: 980ms;
+	--intro-out: 80ms;
+}
+
+.intro-slot-stats {
+	--intro-in: 1140ms;
+	--intro-out: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.intro-stage--rise[data-intro-hidden='true'] {
+		transform: none;
+	}
+}
+
 /* Atmospheric Film Grain & Vignette Overlays (opacity: 0.028, pointer-events: none) */
 .film-grain,
 .cosmic-grain {

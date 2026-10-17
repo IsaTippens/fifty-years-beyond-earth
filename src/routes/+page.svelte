@@ -23,7 +23,7 @@
 {/if}
 <!-- Foreground Trailer Cut Scrollytelling Journey -->
 <main class="relative z-10 w-full overflow-x-clip">
-	<!-- 1. Opening Full-Screen Hero (Untouched) -->
+	<!-- 1. Opening Full-Screen Hero (staged intro: void → departure → journey) -->
 	<HeroSection />
 
 	<!-- 2. Rapid-Fire Seven-Chapter Trailer Strip (Prologue, Ch. I–V, Epilogue) -->

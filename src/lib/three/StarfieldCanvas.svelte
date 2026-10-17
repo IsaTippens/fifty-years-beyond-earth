@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as THREE from 'three';
+  import { get } from 'svelte/store';
   import { telemetryStore, type TelemetryState } from '$lib/stores/scrollTelemetry';
+  import { introPhaseStore } from '$lib/stores/introSequence';
   import {
     NEBULA_VERTEX_SHADER,
     NEBULA_FRAGMENT_SHADER
@@ -54,7 +56,9 @@
 
       float nearFade = smoothstep(2.2, 12.0, dist);
       float farFade = 1.0 - smoothstep(depthSpan * 0.78, depthSpan * 0.99, dist);
-      vDepthFade = nearFade * farFade;
+      // Dissolve stars just before they wrap back to the far shell so forward drift never pops
+      float wrapFade = smoothstep(0.0, 8.0, -wrappedZ);
+      vDepthFade = nearFade * farFade * wrapFade;
 
       vBokeh = smoothstep(34.0, 7.5, dist) * step(1.05, aSpeed);
 
@@ -393,6 +397,7 @@
 
     uniform float uTime;
     uniform float uScrollProgress;
+    uniform float uOpacity;
 
     varying float vArcProgress;
     varying float vCameraDist;
@@ -403,7 +408,7 @@
       float activeEnvelope = 1.0 - smoothstep(headProgress - 0.08, headProgress + 0.22, vArcProgress);
 
       vec3 warmAmber = vec3(0.784, 0.608, 0.341);
-      float alpha = 0.14 * (0.45 + 0.55 * activeEnvelope) * distFade;
+      float alpha = 0.14 * (0.45 + 0.55 * activeEnvelope) * distFade * uOpacity;
 
       gl_FragColor = vec4(warmAmber, clamp(alpha, 0.0, 0.14));
     }
@@ -807,6 +812,17 @@
   let currentScrollProgress = $state(0);
   let currentChapterIndex = $state(0);
   let activeWaypointHud = $state<WaypointHudState | null>(null);
+  // Canvas fades up out of the void once the first frame exists, instead of popping in
+  let sceneRevealed = $state(false);
+
+  // Intro choreography: idle forward drift keeps the void traveled-through before any scroll
+  const STAR_IDLE_DRIFT_PER_SECOND = 1.6;
+  // Earth arrives on departure (rising from below frame as the camera eases back) and recedes on return to the void
+  const EARTH_ARRIVAL_SECONDS = 2.8;
+  const EARTH_RECEDE_SECONDS = 2.0;
+  const EARTH_ARRIVAL_DROP = 9.5;
+  const CAMERA_ARRIVAL_PUSH_IN = 1.8;
+  const EARTH_ARRIVAL_SPIN = 0.35;
 
   function initFallbackStarData(count: number) {
     const palette = ['#e8e6e1', '#dcd8cf', '#c89b57', '#ddb474', '#b8c4d8'];
@@ -834,9 +850,17 @@
       currentChapterIndex = targetChapterIndex;
     });
 
+    let earthArrivalTarget = 0;
+    const unsubscribeIntro = introPhaseStore.subscribe((phase) => {
+      earthArrivalTarget = phase === 'void' ? 0 : 1;
+    });
+    // Mounted mid-journey (late load or restored scroll): Earth is already on station
+    let earthArrivalLinear = get(introPhaseStore) === 'journey' ? 1 : 0;
+
     if (!canvasEl) {
       return () => {
         unsubscribeTelemetry();
+        unsubscribeIntro();
       };
     }
 
@@ -853,6 +877,7 @@
       initFallbackStarData(180);
       return () => {
         unsubscribeTelemetry();
+        unsubscribeIntro();
       };
     }
 
@@ -1483,7 +1508,9 @@
 
     const trajectoryUniforms = {
       uTime: { value: 0 },
-      uScrollProgress: { value: 0 }
+      uScrollProgress: { value: 0 },
+      // Filament departs from Earth, so it arrives (and retires) with the planet
+      uOpacity: { value: 0 }
     };
     const trajectoryMaterial = new THREE.ShaderMaterial({
       vertexShader: VOYAGER_TRAJECTORY_VERTEX_SHADER,
@@ -1594,9 +1621,24 @@
 
       animationFrameId = window.requestAnimationFrame(renderLoop);
 
-      const dt = Math.min((now - prevTime) * 0.001, 0.1);
+      const frameSeconds = (now - prevTime) * 0.001;
+      const dt = Math.min(frameSeconds, 0.1);
       prevTime = now;
       const elapsed = (now - startTime) * 0.001;
+
+      // Intro choreography: time-based Earth arrival (departure) / recession (back to the void)
+      if (earthArrivalLinear !== earthArrivalTarget) {
+        const arriving = earthArrivalTarget > earthArrivalLinear;
+        const step = Math.min(frameSeconds, 0.25) / (arriving ? EARTH_ARRIVAL_SECONDS : EARTH_RECEDE_SECONDS);
+        earthArrivalLinear = arriving
+          ? Math.min(earthArrivalTarget, earthArrivalLinear + step)
+          : Math.max(earthArrivalTarget, earthArrivalLinear - step);
+      }
+      // Quintic smootherstep: the finale's smoothstep easing with a softer launch and settle
+      const earthArrival =
+        earthArrivalLinear * earthArrivalLinear * earthArrivalLinear *
+        (earthArrivalLinear * (earthArrivalLinear * 6.0 - 15.0) + 10.0);
+      const earthArrivalRise = prefersReducedMotion ? 0 : 1.0 - earthArrival;
 
       const prevSmoothScroll = smoothScroll;
       const scrollJump = Math.abs(targetScrollProgress - smoothScroll);
@@ -1616,7 +1658,7 @@
       // Camera flight kinematics
       const cameraRigOffsetX = smoothMouseX * 0.42;
       const cameraRigOffsetY = smoothMouseY * 0.28;
-      camera.position.set(cameraRigOffsetX, cameraRigOffsetY, 12.0);
+      camera.position.set(cameraRigOffsetX, cameraRigOffsetY, 12.0 - earthArrivalRise * CAMERA_ARRIVAL_PUSH_IN);
       camera.rotation.set(
         smoothMouseY * 0.022 - smoothScroll * 0.025,
         -smoothMouseX * 0.03 + Math.sin(smoothScroll * Math.PI * 1.5) * 0.028,
@@ -1633,7 +1675,8 @@
       nebulaUniforms.uWarpSpeed.value = Math.abs(smoothWarpVelocity);
 
       starUniforms.uTime.value = elapsed;
-      starUniforms.uTravelZ.value = smoothScroll * 460.0 + (prefersReducedMotion ? 0 : elapsed * 0.65);
+      starUniforms.uTravelZ.value =
+        smoothScroll * 460.0 + (prefersReducedMotion ? 0 : elapsed * STAR_IDLE_DRIFT_PER_SECOND);
       starUniforms.uWarpVelocity.value = smoothWarpVelocity;
 
       let candidateHud: WaypointHudState | null = null;
@@ -1642,16 +1685,21 @@
       // WAYPOINT 1: EARTH (0.00 -> 0.095) — Commanding LEO Presence at Start
       // ----------------------------------------------------------------------
       const earthT = THREE.MathUtils.clamp(smoothScroll / 0.095, 0, 1);
-      const earthOpacity = 1.0 - THREE.MathUtils.smoothstep(smoothScroll, 0.06, 0.095);
+      const earthOpacity =
+        (1.0 - THREE.MathUtils.smoothstep(smoothScroll, 0.06, 0.095)) *
+        THREE.MathUtils.smoothstep(earthArrival, 0.0, 0.55);
       if (earthOpacity > 0.004) {
         const earthX = THREE.MathUtils.lerp(isMobileNow ? 1.2 : 3.2, isMobileNow ? 2.4 : 6.4, Math.pow(earthT, 0.85));
-        const earthY = THREE.MathUtils.lerp(isMobileNow ? -1.8 : -1.3, -6.5, Math.pow(earthT, 0.9));
+        const earthY =
+          THREE.MathUtils.lerp(isMobileNow ? -1.8 : -1.3, -6.5, Math.pow(earthT, 0.9)) -
+          earthArrivalRise * EARTH_ARRIVAL_DROP;
         const earthZ = THREE.MathUtils.lerp(isMobileNow ? 3.2 : 4.6, -54.0, Math.pow(earthT, 1.15));
         earthGroup.position.set(earthX, earthY, earthZ);
 
         const earthScale = THREE.MathUtils.lerp(1.0, 0.22, Math.pow(earthT, 0.8));
         earthSurfaceMesh.scale.setScalar(earthScale);
         atmosphereMesh.scale.setScalar(earthScale);
+        earthSurfaceMesh.rotation.y = -1.15 + earthArrivalRise * EARTH_ARRIVAL_SPIN;
 
         earthSurfaceUniforms.uTime.value = elapsed;
         earthSurfaceUniforms.uOpacity.value = earthOpacity;
@@ -1904,8 +1952,10 @@
       );
       trajectoryUniforms.uTime.value = elapsed;
       trajectoryUniforms.uScrollProgress.value = smoothScroll;
+      trajectoryUniforms.uOpacity.value = earthArrival;
 
       renderer.render(scene, camera);
+      if (!sceneRevealed) sceneRevealed = true;
     };
 
     const ensureRunning = () => {
@@ -1951,6 +2001,7 @@
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       mediaReducedMotion.removeEventListener('change', handleReducedMotionChange);
       unsubscribeTelemetry();
+      unsubscribeIntro();
 
       nebulaGeometry.dispose();
       nebulaMaterial.dispose();
@@ -1997,27 +2048,31 @@
   {#if !webglFailed}
     <canvas
       bind:this={canvasEl}
-      class="block h-full w-full"
+      class="block h-full w-full transition-opacity duration-[1800ms] ease-out"
+      style:opacity={sceneRevealed ? 1 : 0}
     ></canvas>
 
-    {#if activeWaypointHud && activeWaypointHud.opacity > 0.05}
-      <div
-        class="pointer-events-none fixed z-10 font-mono-tech uppercase transition-opacity duration-200"
-        data-testid={`solar-waypoint-${activeWaypointHud.id}`}
-        style={`left: ${activeWaypointHud.screenX.toFixed(0)}px; top: ${activeWaypointHud.screenY.toFixed(0)}px; opacity: ${activeWaypointHud.opacity.toFixed(3)};`}
-      >
-        <div class="flex items-center gap-2 text-[11px] md:text-[10px] tracking-[0.16em] text-[#C89B57] font-medium drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
-          <span class="inline-block h-1.5 w-1.5 rounded-full bg-[#C89B57] shadow-[0_0_8px_#C89B57]"></span>
-          <span>{activeWaypointHud.name}</span>
+    <!-- Waypoint callouts are HUD readouts: held back until mission control comes online -->
+    <div class="intro-stage intro-slot-readout" data-intro-hidden={$introPhaseStore !== 'journey'}>
+      {#if activeWaypointHud && activeWaypointHud.opacity > 0.05}
+        <div
+          class="pointer-events-none fixed z-10 font-mono-tech uppercase transition-opacity duration-200"
+          data-testid={`solar-waypoint-${activeWaypointHud.id}`}
+          style={`left: ${activeWaypointHud.screenX.toFixed(0)}px; top: ${activeWaypointHud.screenY.toFixed(0)}px; opacity: ${activeWaypointHud.opacity.toFixed(3)};`}
+        >
+          <div class="flex items-center gap-2 text-[11px] md:text-[10px] tracking-[0.16em] text-[#C89B57] font-medium drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
+            <span class="inline-block h-1.5 w-1.5 rounded-full bg-[#C89B57] shadow-[0_0_8px_#C89B57]"></span>
+            <span>{activeWaypointHud.name}</span>
+          </div>
+          <div class="mt-0.5 pl-3.5 text-[11px] md:text-[9.5px] tracking-[0.12em] text-[#E8E6E1]/75 drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
+            {activeWaypointHud.distanceLabel}
+          </div>
+          <div class="pl-3.5 text-[11px] md:text-[9px] tracking-[0.10em] text-[#E8E6E1]/50 drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
+            {activeWaypointHud.missionNote}
+          </div>
         </div>
-        <div class="mt-0.5 pl-3.5 text-[11px] md:text-[9.5px] tracking-[0.12em] text-[#E8E6E1]/75 drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
-          {activeWaypointHud.distanceLabel}
-        </div>
-        <div class="pl-3.5 text-[11px] md:text-[9px] tracking-[0.10em] text-[#E8E6E1]/50 drop-shadow-[0_1px_8px_rgba(5,6,7,0.95)]">
-          {activeWaypointHud.missionNote}
-        </div>
-      </div>
-    {/if}
+      {/if}
+    </div>
   {:else}
     <!-- Graceful CSS / SVG Fallback if WebGL context creation fails -->
     <div

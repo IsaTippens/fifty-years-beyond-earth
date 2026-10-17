@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { telemetryStore, scrollToSection } from '$lib/stores/scrollTelemetry';
+	import { introPhaseStore, startIntroSequence } from '$lib/stores/introSequence';
 
 	// Exact UTC timestamp of Apollo-Soyuz orbital docking & handshake: July 17, 1975 16:09:00 UTC
 	const ASTP_EPOCH_MS = Date.UTC(1975, 6, 17, 16, 9, 0);
@@ -41,12 +42,18 @@
 	const heroParallaxY = $derived(Math.min(180, $telemetryStore.scrollProgress * 650));
 	const heroOpacity = $derived(Math.max(0, 1 - $telemetryStore.scrollProgress * 5.2));
 
+	// Intro staging: Earth (and its archival airglow) arrives on departure; chrome waits for the journey
+	const earthArrived = $derived($introPhaseStore !== 'void');
+	const chromeHidden = $derived($introPhaseStore !== 'journey');
+
 	onMount(() => {
+		const stopIntroSequence = startIntroSequence();
 		const clockInterval = window.setInterval(() => {
 			missionClock = computeMissionElapsed(Date.now());
 		}, 1000);
 
 		return () => {
+			stopIntroSequence();
 			window.clearInterval(clockInterval);
 		};
 	});
@@ -54,11 +61,15 @@
 
 <section
 	id="hero"
-	class="relative min-h-[78vh] md:min-h-screen w-full overflow-hidden pt-16 pb-8 md:pt-28 md:pb-16 flex flex-col justify-between"
+	class="relative min-h-svh md:min-h-screen w-full overflow-hidden pt-16 pb-8 md:pt-28 md:pb-16 flex flex-col justify-between"
 	aria-label="Fifty Years Beyond Earth Hero Opener"
 >
-	<!-- Subtle Archival Airglow Whisper + Localized Left Scrim so 3D Earth is Prominent & Unmistakable -->
-	<div class="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+	<!-- Subtle Archival Airglow Whisper + Localized Left Scrim — arrives with Earth on departure -->
+	<div
+		class="intro-arrival pointer-events-none absolute inset-0 z-0 overflow-hidden"
+		data-arrived={earthArrived}
+		aria-hidden="true"
+	>
 		<picture class="block h-full w-full">
 			<source
 				type="image/avif"
@@ -91,39 +102,34 @@
 		class="relative z-10 mx-auto max-w-[1320px] px-5 sm:px-10 lg:px-16 w-full my-auto"
 		style={`transform: translate3d(0, ${-heroParallaxY * 0.16}px, 0); opacity: ${heroOpacity};`}
 	>
-		<!-- Quiet Tracked-Out Telemetry Eyebrow -->
+		<!-- Quiet Tracked-Out Telemetry Eyebrow (fades in a beat after the title) -->
 		<div class="line-reveal-mask mb-4 sm:mb-8">
 			<p
-				class="line-reveal-expo font-mono-tech text-[11px] tracking-[0.16em] uppercase text-[#E8E6E1] opacity-60"
+				class="intro-eyebrow font-mono-tech text-[11px] tracking-[0.16em] uppercase text-[#E8E6E1] opacity-60"
 			>
 				1975 — 2026 · FIFTY YEARS OF HUMAN &amp; ROBOTIC EXPLORATION
 			</p>
 		</div>
 
-		<!-- Massive Fraunces Display Title with Masked Line-by-Line Rise Reveal -->
+		<!-- Massive Fraunces Display Title — State 0: arrives alone, slow masked line-by-line rise -->
 		<h1
 			class="font-display font-normal text-[#E8E6E1] text-[clamp(2.4rem,9.5vw,9rem)] leading-[0.94] tracking-[-0.032em]"
 		>
 			<span class="line-reveal-mask">
-				<span
-					class="block will-change-transform animate-[maskedLineRise_1s_cubic-bezier(0.16,1,0.3,1)_0.08s_both]"
-				>
-					Fifty Years
-				</span>
+				<span class="intro-title-line intro-title-line--first">Fifty Years</span>
 			</span>
 			<span class="line-reveal-mask">
-				<span
-					class="block will-change-transform animate-[maskedLineRise_1s_cubic-bezier(0.16,1,0.3,1)_0.22s_both]"
-				>
-					Beyond Earth
-				</span>
+				<span class="intro-title-line intro-title-line--second">Beyond Earth</span>
 			</span>
 		</h1>
 
 		<!-- Clean Inter Editorial Lead Paragraph Sitting Directly on the Void -->
-		<div class="line-reveal-mask mt-5 sm:mt-10">
+		<div
+			class="intro-stage intro-stage--rise intro-slot-subcopy mt-5 sm:mt-10"
+			data-intro-hidden={chromeHidden}
+		>
 			<p
-				class="font-sans text-base sm:text-lg md:text-xl max-w-[58ch] leading-[1.65] text-[#F2F0EC]/95 animate-[maskedLineRise_1s_cubic-bezier(0.16,1,0.3,1)_0.36s_both]"
+				class="font-sans text-base sm:text-lg md:text-xl max-w-[58ch] leading-[1.65] text-[#F2F0EC]/95"
 				style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.96), 0 2px 24px rgba(5, 6, 7, 0.92);"
 			>
 				From a Cold War handshake <span class="text-[#C89B57]">222 kilometers</span> above the
@@ -134,20 +140,38 @@
 			</p>
 		</div>
 
-		<!-- Quiet Typographic Scroll Invitation -->
-		<div class="mt-6 sm:mt-14">
-			<button
-				type="button"
-				onclick={() => scrollToSection('prologue')}
-				class="font-mono-tech text-[11px] sm:text-xs tracking-[0.16em] uppercase text-[#E8E6E1]/70 hover:text-[#C89B57] transition-colors duration-700 cursor-pointer focus:outline-none"
+		<!-- State 1 Departure Cue, then the Quiet Typographic Scroll Invitation in the same slot -->
+		<div class="relative mt-6 sm:mt-14">
+			<div
+				class="departure-cue"
+				data-active={$introPhaseStore === 'departure'}
+				data-testid="departure-cue"
+				aria-hidden="true"
 			>
-				↓ Begin Outward Journey · 222 km Low Earth Orbit
-			</button>
+				<span class="departure-cue__line"></span>
+				<span
+					class="departure-cue__label font-mono-tech text-[11px] sm:text-xs tracking-[0.16em] uppercase text-[#E8E6E1]/80"
+				>
+					Departure · Low Earth Orbit · <span class="text-[#C89B57]">222 km</span>
+				</span>
+			</div>
+			<div class="intro-stage intro-stage--rise intro-slot-action" data-intro-hidden={chromeHidden}>
+				<button
+					type="button"
+					onclick={() => scrollToSection('prologue')}
+					class="font-mono-tech text-[11px] sm:text-xs tracking-[0.16em] uppercase text-[#E8E6E1]/70 hover:text-[#C89B57] transition-colors duration-700 cursor-pointer focus:outline-none"
+				>
+					↓ Begin Outward Journey · 222 km Low Earth Orbit
+				</button>
+			</div>
 		</div>
 	</div>
 
 	<!-- Single Bottom Horizontal Hairline with 4 Borderless Editorial Index Metrics -->
-	<div class="relative z-10 mx-auto max-w-[1320px] px-5 sm:px-10 lg:px-16 w-full mt-8 md:mt-12">
+	<div
+		class="intro-stage intro-stage--rise intro-slot-stats relative z-10 mx-auto max-w-[1320px] px-5 sm:px-10 lg:px-16 w-full mt-8 md:mt-12"
+		data-intro-hidden={chromeHidden}
+	>
 		<div
 			class="border-t border-[#E8E6E1]/12 pt-4 md:pt-6 grid grid-cols-2 lg:grid-cols-4 gap-y-3 gap-x-4 md:gap-y-6 md:gap-x-8"
 		>
@@ -205,9 +229,131 @@
 		animation: heroKenBurns 28s cubic-bezier(0.22, 1, 0.36, 1) infinite alternate;
 	}
 
+	/* State 0: the title arrives alone in a slow masked rise; the eyebrow follows a beat later */
+	.intro-title-line {
+		display: block;
+		will-change: transform, opacity;
+		animation: maskedLineRise 2.4s var(--ease-out-quint) both;
+	}
+
+	.intro-title-line--first {
+		animation-delay: 0.5s;
+	}
+
+	.intro-title-line--second {
+		animation-delay: 0.9s;
+	}
+
+	.intro-eyebrow {
+		display: block;
+		animation: maskedLineRise 1.6s var(--ease-out-quint) 2.7s both;
+	}
+
+	/* State 1: archival airglow arrives with Earth and retires with it on return to the void */
+	.intro-arrival {
+		opacity: 0;
+		transition: opacity 1.6s var(--ease-in-out-cubic);
+	}
+
+	.intro-arrival[data-arrived='true'] {
+		opacity: 1;
+		transition: opacity 2.6s var(--ease-in-out-cubic);
+	}
+
+	/* State 1: departure cue — a hairline draws, the readout resolves, then the cue dissolves on its
+	   own (~2s) so Earth finishes its arrival alone before mission control comes online */
+	.departure-cue {
+		position: absolute;
+		top: 0;
+		left: 0;
+		display: inline-flex;
+		flex-direction: column;
+		gap: 0.65rem;
+		white-space: nowrap;
+		pointer-events: none;
+		opacity: 0;
+		text-shadow: 0 1px 10px rgba(5, 6, 7, 0.96);
+		transition: opacity 0.5s var(--ease-in-out-cubic);
+	}
+
+	.departure-cue[data-active='true'] {
+		animation: departureCueBeat 2s var(--ease-in-out-cubic) both;
+	}
+
+	@keyframes departureCueBeat {
+		0% {
+			opacity: 0;
+		}
+		6% {
+			opacity: 1;
+		}
+		70% {
+			opacity: 1;
+		}
+		100% {
+			opacity: 0;
+		}
+	}
+
+	.departure-cue__line {
+		display: block;
+		height: 1px;
+		width: 100%;
+		background: linear-gradient(90deg, rgba(200, 155, 87, 0.9), rgba(200, 155, 87, 0.12));
+		transform: scaleX(0);
+		transform-origin: left center;
+		transition: transform 0s linear 0.5s;
+	}
+
+	.departure-cue[data-active='true'] .departure-cue__line {
+		transform: scaleX(1);
+		transition: transform 0.75s var(--ease-out-expo);
+	}
+
+	.departure-cue__label {
+		display: block;
+		opacity: 0;
+		transform: translate3d(0, 6px, 0);
+		transition:
+			opacity 0s linear 0.5s,
+			transform 0s linear 0.5s;
+	}
+
+	.departure-cue[data-active='true'] .departure-cue__label {
+		opacity: 1;
+		transform: none;
+		transition:
+			opacity 0.45s var(--ease-out-quint) 0.35s,
+			transform 0.6s var(--ease-out-expo) 0.35s;
+	}
+
+	@keyframes introFadeOnly {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.hero-ken-burns {
 			animation: none;
+			transform: none;
+		}
+
+		.intro-title-line,
+		.intro-eyebrow {
+			animation-name: introFadeOnly;
+		}
+
+		.departure-cue__line,
+		.departure-cue[data-active='true'] .departure-cue__line {
+			transform: none;
+		}
+
+		.departure-cue__label,
+		.departure-cue[data-active='true'] .departure-cue__label {
 			transform: none;
 		}
 	}
