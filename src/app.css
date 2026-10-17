@@ -141,8 +141,10 @@ body {
 .reveal-mask {
 	display: block;
 	overflow: hidden;
-	padding-bottom: 0.06em;
-	margin-bottom: -0.06em;
+	/* Room below the baseline for display-serif descenders (the "y" in the hero title), cancelled
+	   by the negative margin so line spacing is unchanged */
+	padding-bottom: 0.22em;
+	margin-bottom: -0.22em;
 }
 
 .line-reveal,

@@ -784,6 +784,120 @@
     return t * t * (3 - 2 * t);
   }
 
+  /**
+   * Fills the unimaged gaps of an archival planetary mosaic (texels of one flat no-data colour)
+   * with a smooth push-pull interpolation of the surrounding imaged terrain, so the globe shows
+   * soft low-resolution coverage instead of hard-edged cutouts.
+   */
+  function fillMosaicGaps(
+    image: CanvasImageSource & { width: number; height: number },
+    gap: readonly [number, number, number],
+    tolerance: number
+  ): HTMLCanvasElement {
+    const width = image.width;
+    const height = image.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return canvas;
+    ctx.drawImage(image, 0, 0);
+    const pixels = ctx.getImageData(0, 0, width, height);
+    const px = pixels.data;
+
+    interface Level { w: number; h: number; rgb: Float32Array; a: Float32Array }
+    const base: Level = { w: width, h: height, rgb: new Float32Array(width * height * 3), a: new Float32Array(width * height) };
+    const isGap = new Uint8Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      const r = px[i * 4];
+      const g = px[i * 4 + 1];
+      const b = px[i * 4 + 2];
+      if (Math.abs(r - gap[0]) <= tolerance && Math.abs(g - gap[1]) <= tolerance && Math.abs(b - gap[2]) <= tolerance) {
+        isGap[i] = 1;
+        continue;
+      }
+      base.rgb[i * 3] = r;
+      base.rgb[i * 3 + 1] = g;
+      base.rgb[i * 3 + 2] = b;
+      base.a[i] = 1;
+    }
+
+    // Push: average imaged texels down a 2× pyramid; coverage saturates at 1
+    const levels: Level[] = [base];
+    while (levels[levels.length - 1].w > 1 || levels[levels.length - 1].h > 1) {
+      const fine = levels[levels.length - 1];
+      const w = Math.ceil(fine.w / 2);
+      const h = Math.ceil(fine.h / 2);
+      const coarse: Level = { w, h, rgb: new Float32Array(w * h * 3), a: new Float32Array(w * h) };
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          let sr = 0;
+          let sg = 0;
+          let sb = 0;
+          let sa = 0;
+          for (let dy = 0; dy < 2; dy++) {
+            const fy = y * 2 + dy;
+            if (fy >= fine.h) continue;
+            for (let dx = 0; dx < 2; dx++) {
+              const fx = x * 2 + dx;
+              if (fx >= fine.w) continue;
+              const fi = fy * fine.w + fx;
+              const fa = fine.a[fi];
+              sr += fine.rgb[fi * 3] * fa;
+              sg += fine.rgb[fi * 3 + 1] * fa;
+              sb += fine.rgb[fi * 3 + 2] * fa;
+              sa += fa;
+            }
+          }
+          const ci = y * w + x;
+          if (sa > 0) {
+            coarse.rgb[ci * 3] = sr / sa;
+            coarse.rgb[ci * 3 + 1] = sg / sa;
+            coarse.rgb[ci * 3 + 2] = sb / sa;
+            coarse.a[ci] = Math.min(1, sa);
+          }
+        }
+      }
+      levels.push(coarse);
+    }
+
+    // Pull: top up partially covered texels from the bilinearly sampled coarser level
+    for (let l = levels.length - 2; l >= 0; l--) {
+      const fine = levels[l];
+      const coarse = levels[l + 1];
+      for (let y = 0; y < fine.h; y++) {
+        const cy = Math.min(coarse.h - 1, Math.max(0, (y + 0.5) / 2 - 0.5));
+        const y0 = Math.floor(cy);
+        const y1 = Math.min(coarse.h - 1, y0 + 1);
+        const ty = cy - y0;
+        for (let x = 0; x < fine.w; x++) {
+          const fi = y * fine.w + x;
+          const fa = fine.a[fi];
+          if (fa >= 1) continue;
+          const cx = Math.min(coarse.w - 1, Math.max(0, (x + 0.5) / 2 - 0.5));
+          const x0 = Math.floor(cx);
+          const x1 = Math.min(coarse.w - 1, x0 + 1);
+          const tx = cx - x0;
+          for (let c = 0; c < 3; c++) {
+            const top = coarse.rgb[(y0 * coarse.w + x0) * 3 + c] * (1 - tx) + coarse.rgb[(y0 * coarse.w + x1) * 3 + c] * tx;
+            const bottom = coarse.rgb[(y1 * coarse.w + x0) * 3 + c] * (1 - tx) + coarse.rgb[(y1 * coarse.w + x1) * 3 + c] * tx;
+            fine.rgb[fi * 3 + c] = fine.rgb[fi * 3 + c] * fa + (top * (1 - ty) + bottom * ty) * (1 - fa);
+          }
+          fine.a[fi] = 1;
+        }
+      }
+    }
+
+    for (let i = 0; i < width * height; i++) {
+      if (!isGap[i]) continue;
+      px[i * 4] = base.rgb[i * 3];
+      px[i * 4 + 1] = base.rgb[i * 3 + 1];
+      px[i * 4 + 2] = base.rgb[i * 3 + 2];
+    }
+    ctx.putImageData(pixels, 0, 0);
+    return canvas;
+  }
+
   function createSolidFallbackTexture(rHex: number, gHex: number, bHex: number): THREE.DataTexture {
     const data = new Uint8Array([rHex, gHex, bHex, 255]);
     const tex = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
@@ -819,7 +933,7 @@
   // Canvas fades up out of the void once the first frame exists, instead of popping in
   let sceneRevealed = $state(false);
 
-  // Intro choreography: idle forward drift keeps the void traveled-through before any scroll
+  // Intro choreography: idle outward drift keeps the void traveled-through before any scroll
   const STAR_IDLE_DRIFT_PER_SECOND = 1.6;
   // Earth arrives on departure (rising from below frame as the camera eases back) and recedes on return to the void
   const EARTH_ARRIVAL_SECONDS = 2.8;
@@ -1270,7 +1384,7 @@
       opacity: 0.0
     });
     const europaMesh = new THREE.Mesh(galileanMoonGeo, europaMat);
-    // Trailing on the far side from the outbound path, clear of the next waypoint in frame
+    // On the far side from the approach path, clear of the next waypoint in frame
     europaMesh.position.set(4.6, 0.3, 1.6);
     jupiterGroup.add(europaMesh);
 
@@ -1397,8 +1511,9 @@
     });
     const plutoMesh = new THREE.Mesh(plutoGeo, plutoMat);
     plutoMesh.rotation.z = THREE.MathUtils.degToRad(12.0);
-    // North tipped toward the viewer: centres Tombaugh Regio, hides the unimaged southern gap
-    plutoMesh.rotation.x = 0.36;
+    // North tipped toward the viewer: centres Tombaugh Regio and pushes the smeared low-resolution
+    // southern coverage down to the limb
+    plutoMesh.rotation.x = 0.62;
     plutoGroup.add(plutoMesh);
 
     // Tidally locked companion Charon
@@ -1429,11 +1544,15 @@
     charonMesh.position.set(-2.9, 0.65, -2.1);
     plutoGroup.add(charonMesh);
 
-    textureLoader.load('/assets/textures/pluto-map.webp', (tex) => {
+    textureLoader.load('/assets/textures/pluto-map.webp', (loaded) => {
       if (isDisposed) {
-        tex.dispose();
+        loaded.dispose();
         return;
       }
+      // The New Horizons mosaic leaves ~30% unimaged as flat (42, 36, 31); without filling, those
+      // regions read as a hard-edged cutout on the globe
+      const tex = new THREE.CanvasTexture(fillMosaicGaps(loaded.image, [42, 36, 31], 6));
+      loaded.dispose();
       configurePlanetTexture(tex);
       disposableTextures.push(tex);
       plutoUniforms.uAlbedoMap.value = tex;
@@ -1551,9 +1670,11 @@
     /** Earth settles into a pale blue dot as the camera leaves it behind. */
     const PALE_BLUE_DOT_NEAR = 60;
     const PALE_BLUE_DOT_FAR = 150;
+    /** Earth's globe shrinks to this fraction as it becomes the pale blue dot behind Mars. */
+    const PALE_BLUE_DOT_SCALE = 0.4;
     /** Star shells sit this far ahead of the camera, as in the original fixed rig. */
     const STAR_SHELL_LEAD = 12.0;
-    /** Star shells drift slower than forward travel so they read as distant. */
+    /** Star shells recede slower than the camera backs away so they read as distant. */
     const STAR_TRAVEL_RATIO = 0.5;
     /** Camera speed (world units / s) to warp-streak factor. */
     const WARP_SPEED_SCALE = 0.0024;
@@ -1569,7 +1690,7 @@
     const JUPITER_FACE_YAW = faceTextureColumn(0.58); // Great Red Spot
     const SATURN_FACE_YAW = faceTextureColumn(0.25);
     const PLUTO_FACE_YAW = faceTextureColumn(0.49); // Tombaugh Regio
-    // Charon borrows Pluto's map: this column's dark unimaged cap reads as Mordor Macula
+    // Charon borrows Pluto's map: face it away from the heart so it doesn't echo Pluto's face
     const CHARON_FACE_YAW = faceTextureColumn(0.92);
     /** Scroll-scrubbed spin (rad per journey unit) while a waypoint is observed. */
     const OBSERVE_SPIN_RATE = 0.12;
@@ -1587,8 +1708,8 @@
       id: JourneyWaypointId;
       center: THREE.Vector3;
       frameRadius: number;
-      /** Extra sideways push on departure so the flight clears the body instead of grazing it. */
-      clearance: number;
+      /** Arrive straight through the framing centre (an open shell) instead of passing beside it. */
+      flyThrough?: boolean;
       /** [hold start, hold end]: the slow drift across the panel and solo beats. */
       desktop: readonly [CameraFrame, CameraFrame];
       mobile: readonly [CameraFrame, CameraFrame];
@@ -1596,13 +1717,15 @@
       label: 'beside' | 'corner';
     }
 
-    // Bodies stay put in world space; only the camera travels
-    marsGroup.position.set(-24, 6, -130);
-    jupiterGroup.position.set(18, -3, -260);
-    saturnGroup.position.set(-18, 3, -390);
-    plutoGroup.position.set(18, -2, -520);
-    heliopauseMesh.position.set(0, 0, -660);
-    paleBlueDotMesh.position.set(14, 5, -790);
+    // The camera faces sunward (−Z) and backs outward (+Z): each body sits behind the camera until
+    // it is passed, then slides into view and recedes. Bodies stay put; only the camera travels.
+    // Mars sits far enough off Earth's line that the receding pale blue dot never touches its limb
+    marsGroup.position.set(-30, 6, 130);
+    jupiterGroup.position.set(18, -3, 260);
+    saturnGroup.position.set(-18, 3, 390);
+    plutoGroup.position.set(18, -2, 520);
+    heliopauseMesh.position.set(0, 0, 660);
+    paleBlueDotMesh.position.set(14, 5, 790);
     // The filament departs Earth: anchored where it sat relative to the hero camera
     const TRAJECTORY_ANCHOR = new THREE.Vector3(-3.2, 1.3, -4.6);
 
@@ -1614,7 +1737,7 @@
       .normalize();
     saturnBodyUniforms.uRingNormal.value.copy(ringNormalWorld);
 
-    // Fixed sunlit-gibbous phase per body: the Sun sits behind the outbound camera
+    // Fixed sunlit-gibbous phase per body, lit from over the camera's shoulder (no Sun is drawn)
     marsUniforms.uSunDirection.value.set(0.75, 0.24, 0.68).normalize();
     jupiterUniforms.uSunDirection.value.set(-0.75, 0.22, 0.68).normalize();
     saturnBodyUniforms.uSunDirection.value.set(0.72, 0.36, 0.68).normalize();
@@ -1624,7 +1747,6 @@
       earth: {
         center: new THREE.Vector3(0, 0, 0),
         frameRadius: 5.35,
-        clearance: 6.5,
         desktop: [{ offset: [-3.2, 1.3, 7.4] }, { x: 0.24, y: -0.04, r: 0.58 }],
         mobile: [{ offset: [-1.2, 1.8, 8.8] }, { x: 0, y: 0.06, r: 0.36 }],
         label: 'beside'
@@ -1632,15 +1754,13 @@
       mars: {
         center: marsGroup.position.clone(),
         frameRadius: 2.15,
-        clearance: 3.0,
         desktop: [{ x: -0.22, y: 0.02, r: 0.42 }, { x: -0.18, y: 0, r: 0.48 }],
-        mobile: [{ x: 0, y: 0.08, r: 0.3 }, { x: 0, y: 0.06, r: 0.34 }],
+        mobile: [{ x: -0.06, y: 0.08, r: 0.3 }, { x: -0.06, y: 0.06, r: 0.34 }],
         label: 'beside'
       },
       jupiter: {
         center: jupiterGroup.position.clone(),
         frameRadius: 3.45,
-        clearance: 5.5,
         desktop: [{ x: 0.2, y: 0, r: 0.44 }, { x: 0.16, y: 0.02, r: 0.5 }],
         mobile: [{ x: 0, y: 0.08, r: 0.3 }, { x: 0, y: 0.06, r: 0.34 }],
         label: 'beside'
@@ -1648,7 +1768,6 @@
       saturn: {
         center: saturnGroup.position.clone(),
         frameRadius: saturnRingOuter,
-        clearance: 8.0,
         desktop: [{ x: -0.18, y: 0.02, r: 0.5 }, { x: -0.14, y: 0, r: 0.56 }],
         mobile: [{ x: 0, y: 0.06, r: 0.38 }, { x: 0, y: 0.05, r: 0.42 }],
         label: 'beside'
@@ -1657,7 +1776,6 @@
         // Framed between Pluto and Charon, weighted toward Pluto
         center: plutoGroup.position.clone().add(new THREE.Vector3(-1.0, 0.25, -0.7)),
         frameRadius: 2.6,
-        clearance: 4.0,
         desktop: [{ x: 0.2, y: 0, r: 0.36 }, { x: 0.17, y: 0.02, r: 0.42 }],
         mobile: [{ x: 0.04, y: 0.08, r: 0.26 }, { x: 0.04, y: 0.06, r: 0.29 }],
         label: 'beside'
@@ -1665,7 +1783,7 @@
       heliopause: {
         center: heliopauseMesh.position.clone(),
         frameRadius: 24.0,
-        clearance: 0,
+        flyThrough: true,
         desktop: [{ x: 0, y: 0, r: 0.72 }, { x: 0, y: 0.02, r: 0.82 }],
         mobile: [{ x: 0, y: 0.04, r: 0.4 }, { x: 0, y: 0.04, r: 0.45 }],
         label: 'corner'
@@ -1673,15 +1791,13 @@
       interstellar: {
         center: paleBlueDotMesh.position.clone(),
         frameRadius: 2.75,
-        clearance: 2.0,
         desktop: [{ x: 0.22, y: 0.12, r: 0.2 }, { x: 0.2, y: 0.1, r: 0.24 }],
         mobile: [{ x: 0, y: 0.12, r: 0.16 }, { x: 0, y: 0.1, r: 0.19 }],
         label: 'beside'
       },
       'deep-void': {
-        center: new THREE.Vector3(-6, 2, -900),
+        center: new THREE.Vector3(-6, 2, 900),
         frameRadius: 1.0,
-        clearance: 0,
         desktop: [{ offset: [0, 0, 40] }, { offset: [0, -0.5, 30] }],
         mobile: [{ offset: [0, 0, 40] }, { offset: [0, -0.5, 30] }],
         label: 'corner'
@@ -1723,26 +1839,36 @@
       return out.copy(holdStartPose).lerp(holdEndPose, smootherstep01(h));
     };
 
-    // Flight k → k+1: cubic Bézier that first slides away from body k, then arrives straight
-    // behind body k+1 so it grows in place as the camera settles.
+    // Flight k → k+1: cubic Bézier that first backs straight away from body k (it recedes in
+    // place), then crosses body k+1's plane off to one side so it slides into view from the frame
+    // edge, and backs onto its framing.
     const flightP0 = new THREE.Vector3();
     const flightP1 = new THREE.Vector3();
     const flightP2 = new THREE.Vector3();
     const flightP3 = new THREE.Vector3();
+    /** Lateral clearance (in body frame radii) when the camera passes the arriving body. */
+    const ARRIVAL_CLEARANCE = 2.2;
     const setFlightControls = (k: number, aspect: number, mobile: boolean) => {
-      const rig = STATION_RIGS[k];
+      const arrival = STATION_RIGS[k + 1];
       holdPose(k, 1, aspect, mobile, flightP0);
       holdPose(k + 1, 0, aspect, mobile, flightP3);
-      const lateral = flightP3.x - flightP0.x;
-      const offCentre = flightP0.x - rig.center.x;
-      const away = Math.abs(offCentre) > 0.25 ? Math.sign(offCentre) : Math.sign(lateral) || 1;
-      const dz = Math.max(1, flightP0.z - flightP3.z);
+      const lead = Math.max(1, flightP3.z - flightP0.z) * 0.3;
       flightP1.set(
-        flightP0.x + lateral * 0.55 + away * rig.clearance,
-        flightP0.y + (flightP3.y - flightP0.y) * 0.3,
-        flightP0.z - dz * 0.18
+        flightP0.x + (flightP3.x - flightP0.x) * 0.15,
+        flightP0.y + (flightP3.y - flightP0.y) * 0.2,
+        flightP0.z + lead
       );
-      flightP2.set(flightP3.x, flightP3.y, flightP3.z + dz * 0.32);
+      let push = 0;
+      if (!arrival.flyThrough) {
+        // Near its end the curve runs along P2 → P3, crossing the body's plane at standoff/lead of
+        // the way out; push sideways (toward where the camera came from) so that crossing clears it
+        const side = Math.sign(flightP0.x - flightP3.x) || 1;
+        const standoff = Math.max(1, flightP3.z - arrival.center.z);
+        const offset = (flightP3.x - arrival.center.x) * side;
+        const needed = Math.max(0, arrival.frameRadius * ARRIVAL_CLEARANCE - offset);
+        push = side * needed * (lead / standoff);
+      }
+      flightP2.set(flightP3.x + push, flightP3.y, flightP3.z - lead);
     };
     const bezierPoint = (u: number, out: THREE.Vector3) => {
       const v = 1 - u;
@@ -1972,8 +2098,9 @@
       if (headingWeight > 0.0001 && flightTangent.lengthSq() > 1e-6 && !prefersReducedMotion) {
         const horizontal = Math.hypot(flightTangent.x, flightTangent.z);
         const follow = FLIGHT_HEADING_FOLLOW * headingWeight * (isMobileNow ? 0.6 : 1.0);
-        flightYaw = Math.atan2(-flightTangent.x, -flightTangent.z) * follow;
-        flightPitch = Math.atan2(flightTangent.y, horizontal) * follow * 0.8;
+        // The camera backs along its path: turn toward the side the next body slides in from
+        flightYaw = -Math.atan2(flightTangent.x, flightTangent.z) * follow;
+        flightPitch = -Math.atan2(flightTangent.y, horizontal) * follow * 0.8;
       }
 
       camera.position.set(
@@ -1996,7 +2123,7 @@
       nebulaUniforms.uMouse.value.set(smoothMouseX, smoothMouseY);
       nebulaUniforms.uWarpSpeed.value = Math.abs(smoothWarpVelocity);
 
-      // Star shells ride with the camera; forward travel scrolls them past at parallax rates
+      // Star shells ride with the camera; backing outward makes them recede at parallax rates
       starPoints.position.set(
         camera.position.x * 0.92,
         camera.position.y * 0.92,
@@ -2005,7 +2132,7 @@
       starUniforms.uTime.value = elapsed;
       starUniforms.uTravelZ.value =
         (journeyStartZ - rigPose.z) * STAR_TRAVEL_RATIO +
-        (prefersReducedMotion ? 0 : elapsed * STAR_IDLE_DRIFT_PER_SECOND);
+        (prefersReducedMotion ? 0 : -elapsed * STAR_IDLE_DRIFT_PER_SECOND);
       starUniforms.uWarpVelocity.value = smoothWarpVelocity;
 
       // ----------------------------------------------------------------------
@@ -2018,6 +2145,9 @@
         earthGroup.position.set(0, -earthArrivalRise * EARTH_ARRIVAL_DROP, 0);
         earthSurfaceMesh.rotation.y = -1.15 + earthArrivalRise * EARTH_ARRIVAL_SPIN;
         const paleBlueDotMix = THREE.MathUtils.smoothstep(earthDistance, PALE_BLUE_DOT_NEAR, PALE_BLUE_DOT_FAR);
+        const earthScale = THREE.MathUtils.lerp(1.0, PALE_BLUE_DOT_SCALE, paleBlueDotMix);
+        earthSurfaceMesh.scale.setScalar(earthScale);
+        atmosphereMesh.scale.setScalar(earthScale);
         earthSurfaceUniforms.uTime.value = elapsed;
         earthSurfaceUniforms.uOpacity.value = earthOpacity;
         earthSurfaceUniforms.uPaleBlueDotMix.value = paleBlueDotMix;

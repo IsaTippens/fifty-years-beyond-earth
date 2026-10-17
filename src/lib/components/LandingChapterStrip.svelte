@@ -279,15 +279,16 @@
 				style={`height: ${journeyGapAfterChapterVh(ch.chapterId)}vh;`}
 				data-testid={`journey-gap-${waypoint?.id ?? ch.chapterId}`}
 				aria-hidden="true"
-			>
-				{#if index === CHAPTER_HIGHLIGHTS.length - 1}
-					<!-- The deep void dims to the finale's black as its section rises -->
-					<div
-						class="absolute inset-x-0 bottom-0 h-[60vh]"
-						style="background: linear-gradient(180deg, rgba(5, 6, 7, 0) 0%, #050607 100%);"
-					></div>
-				{/if}
-			</div>
+			></div>
+			{#if index === CHAPTER_HIGHLIGHTS.length - 1}
+				<!-- The deep void dims to the finale's black as its section rises. A direct child of the
+				     section so it spans the full viewport width, not the padded content box -->
+				<div
+					class="pointer-events-none absolute inset-x-0 bottom-0 h-[60vh]"
+					style="background: linear-gradient(180deg, rgba(5, 6, 7, 0) 0%, #050607 100%);"
+					aria-hidden="true"
+				></div>
+			{/if}
 		</section>
 	{/each}
 </div>
