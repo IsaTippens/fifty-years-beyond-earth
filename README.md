@@ -15,7 +15,7 @@ An Awwwards-caliber scroll-driven narrative web experience documenting humanity'
   - The Finale ("The Pull-Back"): Continuous 9-order-of-magnitude logarithmic zoom from the Heliosphere outward to the Oort Cloud, Local Stellar Neighborhood, Orion Arm, and full ESA Gaia / NASA SVS Milky Way panorama with "You are here" Sun + Voyager 1 & 2 markers.
 - **Live Telemetry & Scrollytelling**:
   - Real-time Voyager 1 odometer ticking at 16.9995 km/s (+1.02 km per tick) with Deep Space Network signal attenuation (dBm) and Pu-238 RTG electrical wattage.
-  - "Quiet Space Documentary" editorial art direction: `#050607` true void, `#E8E6E1` off-white, `#C89B57` warm amber accent, Fraunces serif display titles, Inter body prose, and JetBrains Mono telemetry numerals.
+  - "Quiet Space Documentary" editorial art direction: `#050607` true void, `#E8E6E1` off-white, `#C89B57` warm amber accent, Bodoni Moda hero and chapter titles, Newsreader narrative prose, subtitles and captions, Space Grotesk UI labels, and IBM Plex Mono telemetry numerals — self-hosted from `static/fonts/` and chosen solely in `src/lib/styles/tokens.css`.
   - Responsive down to 390px mobile viewports with lightweight static archival plates and on-demand interactive WebGL.
 
 ## Quickstart
@@ -49,6 +49,7 @@ fifty-years-beyond-earth/
 │   ├── routes/               # SvelteKit root layout and scrollytelling page
 │   └── app.css               # Editorial type system and dark documentary styling
 ├── static/assets/            # 57 local archival plates & 3D textures in AVIF/WebP
+├── static/fonts/             # Self-hosted Latin-subset WOFF2 typefaces (SIL OFL 1.1)
 ├── ASSETS.md                 # Complete provenance and credit line for every image asset
 ├── SOURCES.md                # 95 primary citations cross-referenced to NASA, ESA, JPL, etc.
 ├── package.json

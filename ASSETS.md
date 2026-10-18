@@ -71,3 +71,16 @@ Copyrighted commercial spaceflight footage is never downloaded or re-hosted; it 
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `falcon9-lz1-landing` | `falcon9-landing-2015` | `ZCBE8ocOkAQ` | **Falcon 9 First Stage Landing at Landing Zone 1 (From Helicopter)** | Dec 21, 2015 | <https://www.youtube.com/watch?v=ZCBE8ocOkAQ> | Embedded External Source — © SpaceX | `Video: SpaceX` |
 | `starship-flight5-catch` | `commercial-crew-demo2-2020` | `hI9HQfCAw64` | **Starship’s Fifth Flight Test — Super Heavy Booster "Mechazilla" Tower Catch** | Oct 13, 2024 | <https://www.youtube.com/watch?v=hI9HQfCAw64> | Embedded External Source — © SpaceX | `Video: SpaceX` |
+
+---
+
+## 6. Self-Hosted Typefaces (`static/fonts/`)
+
+Every typeface is downloaded from the official Google Fonts repository (`github.com/google/fonts`), subset to Latin plus the punctuation, arrows, super/subscripts and math symbols used on the site, and served as WOFF2 from `/fonts/...` (no third-party font CDN). Each family's license ships beside its files as `OFL.txt`.
+
+| Family | Role | Files | Axes / Weights | Designer | Source | License |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Bodoni Moda** | Hero & chapter titles (≥ 34px) | `/fonts/bodoni-moda/BodoniModa-VF.latin.woff2` | Variable `opsz` 6–96, `wght` 400–900 | Owen Earl (indestructible type\*) | <https://github.com/google/fonts/tree/main/ofl/bodonimoda> | SIL Open Font License 1.1 |
+| **Newsreader** | Narrative prose, subtitles, captions & smaller headings | `/fonts/newsreader/Newsreader{,-Italic}-VF.latin.woff2` | Variable `opsz` 6–72, `wght` 200–800 | Production Type | <https://github.com/google/fonts/tree/main/ofl/newsreader> | SIL Open Font License 1.1 |
+| **Space Grotesk** | Body & UI labels | `/fonts/space-grotesk/SpaceGrotesk-VF.latin.woff2` | Variable `wght` 300–700 | Florian Karsten | <https://github.com/google/fonts/tree/main/ofl/spacegrotesk> | SIL Open Font License 1.1 |
+| **IBM Plex Mono** | Telemetry numerals & labels | `/fonts/ibm-plex-mono/IBMPlexMono-{Regular,Medium,SemiBold,Bold}.latin.woff2` | Static 400 / 500 / 600 / 700 | Mike Abbink, Bold Monday | <https://github.com/google/fonts/tree/main/ofl/ibmplexmono> | SIL Open Font License 1.1 |

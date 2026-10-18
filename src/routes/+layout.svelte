@@ -1,8 +1,4 @@
 <script lang="ts">
-	import '@fontsource-variable/fraunces';
-	import '@fontsource-variable/inter';
-	import '@fontsource-variable/jetbrains-mono';
-	import '../lib/styles/tokens.css';
 	import '../app.css';
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/stores';

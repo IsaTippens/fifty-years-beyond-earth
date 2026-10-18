@@ -1,7 +1,4 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/fraunces';
-@import '@fontsource-variable/inter';
-@import '@fontsource-variable/jetbrains-mono';
 @import './lib/styles/tokens.css';
 
 @theme {
