@@ -5,16 +5,6 @@
 @import './lib/styles/tokens.css';
 
 @theme {
-	--font-display:
-		'Fraunces Variable', 'Fraunces', 'Instrument Serif', 'Playfair Display', 'Times New Roman',
-		Georgia, serif;
-	--font-sans:
-		'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-		'Helvetica Neue', Arial, sans-serif;
-	--font-mono:
-		'JetBrains Mono Variable', 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, Menlo,
-		Monaco, Consolas, monospace;
-
 	--color-void: #050607;
 	--color-deep: #08090b;
 	--color-starlight: #e8e6e1;
@@ -24,16 +14,6 @@
 
 :root {
 	color-scheme: dark;
-	--font-display:
-		'Fraunces Variable', 'Fraunces', 'Instrument Serif', 'Playfair Display', 'Times New Roman',
-		Georgia, serif;
-	--font-sans:
-		'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-		'Helvetica Neue', Arial, sans-serif;
-	--font-mono:
-		'JetBrains Mono Variable', 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, Menlo,
-		Monaco, Consolas, monospace;
-
 	--bg-cosmos: var(--bg-void);
 	--bg-cosmos-elevated: var(--bg-deep);
 	--text-starlight: var(--text-primary);
@@ -51,6 +31,7 @@ html {
 	background-color: var(--bg-void, #050607);
 	color: var(--text-primary, #e8e6e1);
 	font-family: var(--font-sans);
+	font-weight: var(--font-weight-body);
 	font-size: 16px;
 	scrollbar-width: thin;
 	scrollbar-color: rgba(200, 155, 87, 0.28) #050607;
@@ -67,11 +48,7 @@ body {
 	overflow-x: hidden;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
-	font-feature-settings:
-		'cv02' 1,
-		'cv03' 1,
-		'cv04' 1,
-		'cv11' 1;
+	font-feature-settings: var(--font-feature-body);
 }
 
 ::selection {
@@ -99,12 +76,37 @@ body {
 	background: rgba(200, 155, 87, 0.45);
 }
 
-/* Editorial & Telemetry Typography Helpers */
+/* Editorial & Telemetry Typography Helpers — every family, weight and variation
+   setting resolves from the typeface role tokens in lib/styles/tokens.css. */
+.font-title {
+	font-family: var(--font-title);
+	font-variation-settings: var(--font-title-settings);
+	letter-spacing: var(--tracking-display, -0.032em);
+	font-optical-sizing: auto;
+	overflow-wrap: break-word;
+}
+
 .font-display {
 	font-family: var(--font-display);
 	letter-spacing: var(--tracking-display, -0.032em);
 	font-optical-sizing: auto;
 	overflow-wrap: break-word;
+}
+
+.font-subtitle {
+	font-family: var(--font-subtitle);
+	font-style: var(--font-style-subtitle);
+	letter-spacing: var(--tracking-display, -0.032em);
+	font-optical-sizing: auto;
+	overflow-wrap: break-word;
+}
+
+.font-prose {
+	font-family: var(--font-prose);
+}
+
+.font-caption {
+	font-family: var(--font-caption);
 }
 
 .font-sans {
@@ -123,6 +125,30 @@ body {
 	text-transform: uppercase;
 	color: var(--text-telemetry, rgba(232, 230, 225, 0.6));
 	font-variant-numeric: tabular-nums;
+}
+
+/* Role weights sit in the components layer so explicit Tailwind weight utilities
+   still win. Mono and SVG telemetry stay at the mono weight rather than inheriting
+   the body weight (static mono families would otherwise snap to a heavier face). */
+@layer components {
+	.font-title {
+		font-weight: var(--font-weight-title);
+	}
+
+	.font-display {
+		font-weight: var(--font-weight-display);
+	}
+
+	.font-subtitle {
+		font-weight: var(--font-weight-subtitle);
+	}
+
+	.font-mono-tech,
+	.telemetry-label,
+	.hud-badge,
+	svg {
+		font-weight: var(--font-weight-mono);
+	}
 }
 
 /* Masked Line-by-Line Rise Reveal Utilities */

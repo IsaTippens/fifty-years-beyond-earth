@@ -386,7 +386,7 @@
 								<h4 class="mt-1.5 font-display text-lg text-[#E8E6E1] leading-snug">
 									{asset.title}
 								</h4>
-								<p class="mt-1.5 font-sans text-xs text-[#E8E6E1]/68 leading-relaxed">
+								<p class="mt-1.5 font-caption text-xs text-[#E8E6E1]/68 leading-relaxed">
 									{asset.caption}
 								</p>
 								<div class="mt-2.5 pt-2.5 border-t border-[#E8E6E1]/10 font-mono-tech text-[11px] text-[#E8E6E1]/75 leading-relaxed">
@@ -433,7 +433,7 @@
 								<h4 class="mt-1.5 font-display text-lg text-[#E8E6E1] leading-snug">
 									{tex.title}
 								</h4>
-								<p class="mt-1.5 font-sans text-xs text-[#E8E6E1]/68 leading-relaxed">
+								<p class="mt-1.5 font-caption text-xs text-[#E8E6E1]/68 leading-relaxed">
 									{tex.caption}
 								</p>
 								<div class="mt-2.5 pt-2.5 border-t border-[#E8E6E1]/10 font-mono-tech text-[11px] text-[#E8E6E1]/75 leading-relaxed">

@@ -1255,7 +1255,7 @@
 			<div class="font-mono-tech text-xs uppercase tracking-[0.14em] text-[#C89B57]">
 				SET PIECE 01 · CASSINI–HUYGENS ({activePreset.title})
 			</div>
-			<p class="mt-2 font-sans text-base text-[#E8E6E1]/80">{activePreset.caption}</p>
+			<p class="mt-2 font-caption text-base text-[#E8E6E1]/80">{activePreset.caption}</p>
 		</div>
 	{:else}
 		<!-- Top Mission Telemetry Hairline Bar -->
@@ -1330,7 +1330,7 @@
 					<h3 class="mt-1 font-display text-lg font-normal tracking-[-0.02em] text-[#E8E6E1] leading-[1.12]">
 						{activePreset.title}
 					</h3>
-					<p class="mt-1.5 font-sans text-xs leading-[1.55] text-[rgba(232,230,225,0.76)]">
+					<p class="mt-1.5 font-caption text-xs leading-[1.55] text-[rgba(232,230,225,0.76)]">
 						{activePreset.caption}
 					</p>
 				</div>
@@ -1443,7 +1443,7 @@
 					<h3 class="mt-1 font-display text-lg font-normal text-[#E8E6E1]">
 						{activePreset.title}
 					</h3>
-					<p class="mt-1 font-sans text-sm leading-[1.55] text-[rgba(232,230,225,0.78)]">
+					<p class="mt-1 font-caption text-sm leading-[1.55] text-[rgba(232,230,225,0.78)]">
 						{activePreset.caption}
 					</p>
 				</div>

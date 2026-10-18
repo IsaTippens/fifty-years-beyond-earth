@@ -221,9 +221,9 @@
 				<span class="hidden sm:inline">OWLT: {chapter.voyagerLightTime}</span>
 			</div>
 
-			<!-- Enormous Fraunces Chapter Title with Masked Rise -->
+			<!-- Enormous Display Chapter Title with Masked Rise -->
 			<h1
-				class="mt-3 md:mt-5 font-display font-normal text-[#F5F3EE] overflow-hidden pb-1.5 break-words"
+				class="mt-3 md:mt-5 font-title text-[#F5F3EE] overflow-hidden pb-1.5 break-words"
 				style="font-size: clamp(2.15rem, 8vw, 7.5rem); line-height: 0.94; letter-spacing: -0.03em; text-shadow: 0 2px 32px rgba(5, 6, 7, 0.96), 0 1px 8px rgba(5, 6, 7, 0.92);"
 			>
 				<span
@@ -234,7 +234,7 @@
 			</h1>
 			<!-- Editorial Subtitle -->
 			<p
-				class="kinetic-item mt-2.5 md:mt-4 font-display italic font-light text-lg sm:text-xl md:text-2xl text-[#DDB474] max-w-[54ch]"
+				class="kinetic-item mt-2.5 md:mt-4 font-subtitle text-lg sm:text-xl md:text-2xl text-[#DDB474] max-w-[54ch]"
 				style="text-shadow: 0 2px 24px rgba(5, 6, 7, 0.96), 0 1px 6px rgba(5, 6, 7, 0.92);"
 			>
 				{chapter.subtitle}
@@ -242,7 +242,7 @@
 
 			<!-- Opening Prose with High-Contrast Arm's-Length Legibility -->
 			<p
-				class="kinetic-item mt-5 md:mt-10 max-w-[62ch] font-sans text-[16px] sm:text-lg md:text-xl leading-[1.64] md:leading-[1.7] text-[#F2F0EC] font-normal"
+				class="kinetic-item mt-5 md:mt-10 max-w-[62ch] font-prose text-[16px] sm:text-lg md:text-xl leading-[1.64] md:leading-[1.7] text-[#F2F0EC]"
 				style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.98), 0 2px 28px rgba(5, 6, 7, 0.95);"
 			>
 				{chapter.openingProse}
@@ -340,7 +340,7 @@
 
 					{#if milestone.subtitle}
 						<p
-							class="mt-1.5 md:mt-2.5 font-display italic font-light text-base sm:text-lg md:text-xl text-[#E8E6E1]/72 max-w-[60ch]"
+							class="mt-1.5 md:mt-2.5 font-subtitle text-base sm:text-lg md:text-xl text-[#E8E6E1]/72 max-w-[60ch]"
 						>
 							{milestone.subtitle}
 						</p>
@@ -453,7 +453,7 @@
 				<!-- 3. Editorial Body Prose Directly on the Void -->
 				<div class="mt-4 md:mt-8">
 					<p
-						class="max-w-[65ch] font-sans text-base sm:text-[17px] leading-[1.65] text-[#E8E6E1]/92 font-normal"
+						class="max-w-[65ch] font-prose text-base sm:text-[17px] leading-[1.65] text-[#E8E6E1]/92"
 						style="text-shadow: 0 2px 20px rgba(5, 6, 7, 0.9);"
 					>
 						{milestone.summary}
@@ -488,7 +488,7 @@
 							</div>
 							{#each milestone.deepDive.split('\n\n') as paragraph}
 								<p
-									class="font-sans text-base sm:text-[17px] leading-[1.65] text-[#E8E6E1]/75"
+									class="font-prose text-base sm:text-[17px] leading-[1.65] text-[#E8E6E1]/75"
 								>
 									{paragraph}
 								</p>
@@ -559,7 +559,7 @@
 									{stat.value}
 								</div>
 								{#if stat.description}
-									<div class="mt-1 font-sans text-xs text-[#E8E6E1]/58 leading-snug">
+									<div class="mt-1 font-caption text-xs text-[#E8E6E1]/58 leading-snug">
 										{stat.description}
 									</div>
 								{/if}

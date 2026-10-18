@@ -128,9 +128,9 @@
 			</p>
 		</div>
 
-		<!-- Massive Fraunces Display Title — State 0: arrives alone, slow masked line-by-line rise -->
+		<!-- Massive Display Title — State 0: arrives alone, slow masked line-by-line rise -->
 		<h1
-			class="font-display font-normal text-[#E8E6E1] text-[clamp(2.4rem,9.5vw,9rem)] leading-[0.94] tracking-[-0.032em]"
+			class="font-title text-[#E8E6E1] text-[clamp(2.4rem,9.5vw,9rem)] leading-[0.94] tracking-[-0.032em]"
 		>
 			<span class="line-reveal-mask">
 				<span class="intro-title-line intro-title-line--first">Fifty Years</span>
@@ -146,7 +146,7 @@
 			data-intro-hidden={chromeHidden}
 		>
 			<p
-				class="font-sans text-base sm:text-lg md:text-xl max-w-[58ch] leading-[1.65] text-[#F2F0EC]/95"
+				class="font-prose text-base sm:text-lg md:text-xl max-w-[58ch] leading-[1.65] text-[#F2F0EC]/95"
 				style="text-shadow: 0 1px 12px rgba(5, 6, 7, 0.96), 0 2px 24px rgba(5, 6, 7, 0.92);"
 			>
 				From a Cold War handshake <span class="text-[#C89B57]">222 kilometers</span> above the

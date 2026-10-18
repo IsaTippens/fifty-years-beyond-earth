@@ -216,7 +216,7 @@
 
 					<!-- Chapter Title -->
 					<h2
-						class="mt-2 sm:mt-3 font-display font-normal text-[#F5F3EE] overflow-hidden pb-1.5 break-words"
+						class="mt-2 sm:mt-3 font-title text-[#F5F3EE] overflow-hidden pb-1.5 break-words"
 						style="font-size: clamp(2.25rem, 5.2vw, 4.75rem); line-height: 0.95; letter-spacing: -0.03em; text-shadow: 0 2px 28px rgba(5, 6, 7, 0.96), 0 1px 8px rgba(5, 6, 7, 0.92);"
 					>
 						<span class="block will-change-transform" style={titleRise(motion.entry)}>
@@ -226,7 +226,7 @@
 
 					<!-- Strictly ONE Logline Sentence -->
 					<p
-						class="mt-3.5 sm:mt-5 max-w-[52ch] font-sans text-base sm:text-lg leading-[1.62] text-[#F2F0EC] font-normal will-change-transform"
+						class="mt-3.5 sm:mt-5 max-w-[52ch] font-prose text-base sm:text-lg leading-[1.62] text-[#F2F0EC] will-change-transform"
 						style={`text-shadow: 0 1px 14px rgba(5, 6, 7, 0.98), 0 2px 24px rgba(5, 6, 7, 0.95); ${staggerRise(motion.entry, 1)}`}
 					>
 						{ch.logline}
@@ -251,7 +251,7 @@
 								{ch.killerStat.value}
 							</div>
 							<div
-								class="mt-1.5 font-sans text-xs sm:text-sm text-[#E8E6E1]/75 max-w-[42ch]"
+								class="mt-1.5 font-caption text-xs sm:text-sm text-[#E8E6E1]/75 max-w-[42ch]"
 								style="text-shadow: 0 1px 10px rgba(5, 6, 7, 0.96);"
 							>
 								{ch.killerStat.context}

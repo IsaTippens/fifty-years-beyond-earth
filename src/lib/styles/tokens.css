@@ -33,9 +33,32 @@
 	/* ------------------------------------------------------------------------
 	   2. EDITORIAL TYPOGRAPHY & TYPE SCALE
 	   ------------------------------------------------------------------------ */
-	--font-display: 'Fraunces', 'Instrument Serif', 'Playfair Display', 'Times New Roman', Georgia, serif;
-	--font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-	--font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+	/* Typeface roles — the ONLY place font families, weights and variation settings
+	   are chosen. Components reach them through the role helpers in app.css
+	   (.font-title, .font-display, .font-subtitle, .font-prose, .font-caption,
+	   .font-sans, .font-mono-tech) or var(--font-*), never a family name. */
+	--font-display:
+		'Fraunces Variable', 'Fraunces', 'Instrument Serif', 'Playfair Display', 'Times New Roman',
+		Georgia, serif;
+	--font-sans:
+		'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+		'Helvetica Neue', Arial, sans-serif;
+	--font-mono:
+		'JetBrains Mono Variable', 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, Menlo,
+		Monaco, Consolas, monospace;
+	--font-title: var(--font-display); /* hero h1, chapter h1, landing chapter h2 (all >= 34px) */
+	--font-subtitle: var(--font-display); /* chapter + milestone subtitles */
+	--font-prose: var(--font-sans); /* narrative prose: hero lede, loglines, chapter body */
+	--font-caption: var(--font-sans); /* set-piece, plate and stat captions */
+
+	--font-title-settings: normal; /* font-variation-settings for title instances */
+	--font-style-subtitle: italic;
+	--font-feature-body: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1; /* Inter character variants */
+	--font-weight-body: 400;
+	--font-weight-title: 400;
+	--font-weight-display: 400;
+	--font-weight-subtitle: 300;
+	--font-weight-mono: 400;
 
 	/* Display Scale (tight leading, negative tracking, solid warm off-white) */
 	--type-display-hero: clamp(2.35rem, 9.2vw, 9rem);

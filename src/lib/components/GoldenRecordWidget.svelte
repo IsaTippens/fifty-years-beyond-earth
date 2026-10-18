@@ -573,6 +573,9 @@
 		}
 	}
 
+	// Canvas 2D cannot resolve CSS custom properties; read the mono token once.
+	let canvasMonoFamily = '';
+
 	function renderOscilloscope() {
 		if (!isCanvasVisible || !oscCanvas) {
 			animFrameId = null;
@@ -802,7 +805,9 @@
 
 		// Labels on canvas
 		ctx.fillStyle = 'rgba(232, 230, 225, 0.65)';
-		ctx.font = '10px "JetBrains Mono", monospace';
+		canvasMonoFamily ||=
+			getComputedStyle(oscCanvas).getPropertyValue('--font-mono').trim() || 'monospace';
+		ctx.font = `10px ${canvasMonoFamily}`;
 		ctx.fillText(
 			`16⅔ RPM · ANALOG SIGNAL (${activeMode.toUpperCase()})`,
 			12,
@@ -969,7 +974,7 @@
 							y="-14"
 							fill="#E8E6E1"
 							stroke="none"
-							font-family="monospace"
+							font-family="var(--font-mono)"
 							font-size="11.2"
 							font-weight="600"
 							letter-spacing="0.08em"
@@ -1012,7 +1017,7 @@
 							y="132"
 							fill="#DDB474"
 							stroke="none"
-							font-family="monospace"
+							font-family="var(--font-mono)"
 							font-size="10.2"
 						>
 							t = 59.5 min
@@ -1028,7 +1033,7 @@
 							y="-12"
 							fill="#E8E6E1"
 							stroke="none"
-							font-family="monospace"
+							font-family="var(--font-mono)"
 							font-size="11.2"
 							font-weight="600"
 							letter-spacing="0.08em"
@@ -1040,7 +1045,7 @@
 							points="0,20 8,20 8,32 14,32 14,12 22,22 30,10 38,24 46,16 54,20 62,20 62,32 68,32 68,14 78,24 88,12 96,20 104,20 104,32 110,32 110,16 122,20"
 							stroke-width="1.3"
 						/>
-						<text x="0" y="48" fill="#DDB474" stroke="none" font-family="monospace" font-size="10.2">
+						<text x="0" y="48" fill="#DDB474" stroke="none" font-family="var(--font-mono)" font-size="10.2">
 							SCAN = 8.0 ms
 						</text>
 
@@ -1073,7 +1078,7 @@
 								y="72"
 								fill="#DDB474"
 								stroke="none"
-								font-family="monospace"
+								font-family="var(--font-mono)"
 								font-size="10.2"
 							>
 								512 LINES · CIRCLE
@@ -1105,13 +1110,13 @@
 							x="26"
 							y="16"
 							fill="#E8E6E1"
-							font-family="monospace"
+							font-family="var(--font-mono)"
 							font-size="10.6"
 							font-weight="600"
 						>
 							²³⁸U CLOCK
 						</text>
-						<text x="26" y="32" fill="#C89B57" font-family="monospace" font-size="10.0">
+						<text x="26" y="32" fill="#C89B57" font-family="var(--font-mono)" font-size="10.0">
 							t½ = 4.47 Gyr
 						</text>
 					</g>
@@ -1124,7 +1129,7 @@
 							x="-110"
 							y="-76"
 							fill="#E8E6E1"
-							font-family="monospace"
+							font-family="var(--font-mono)"
 							font-size="11.2"
 							font-weight="600"
 							letter-spacing="0.08em"
@@ -1215,7 +1220,7 @@
 							y="-32"
 							fill="#E8E6E1"
 							stroke="none"
-							font-family="monospace"
+							font-family="var(--font-mono)"
 							font-size="11.2"
 							font-weight="600"
 							letter-spacing="0.08em"
@@ -1252,7 +1257,7 @@
 							y="68"
 							fill="#DDB474"
 							stroke="none"
-							font-family="monospace"
+							font-family="var(--font-mono)"
 							font-size="10.2"
 						>
 							1420 MHz · 21 cm

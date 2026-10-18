@@ -544,7 +544,7 @@
 								text-anchor={isMobile ? 'middle' : 'start'}
 								fill="#DDB474"
 								fill-opacity="0.90"
-								font-family="JetBrains Mono, monospace"
+								font-family="var(--font-mono)"
 								font-size={labelPx(9.4, 8.4)}
 								font-weight="600"
 								letter-spacing={svgPx(1.2)}
@@ -574,7 +574,7 @@
 								text-anchor="middle"
 								fill="#E8E6E1"
 								fill-opacity="0.65"
-								font-family="JetBrains Mono, monospace"
+								font-family="var(--font-mono)"
 								font-size={labelPx(8.6, 7.6)}
 								font-weight="400"
 								letter-spacing={svgPx(1.0)}
@@ -637,7 +637,7 @@
 										text-anchor={isMobile ? 'middle' : labelRight ? 'start' : 'end'}
 										fill="#F2F0EC"
 										fill-opacity="0.92"
-										font-family="JetBrains Mono, monospace"
+										font-family="var(--font-mono)"
 										font-size={labelPx(9.4, 8.4)}
 										font-weight="500"
 										letter-spacing={svgPx(1.0)}
@@ -652,7 +652,7 @@
 										text-anchor={isMobile ? 'middle' : labelRight ? 'start' : 'end'}
 										fill="#E8E6E1"
 										fill-opacity="0.62"
-										font-family="JetBrains Mono, monospace"
+										font-family="var(--font-mono)"
 										font-size={labelPx(8.5, 7.5)}
 										font-weight="400"
 										letter-spacing={svgPx(0.75)}
@@ -764,7 +764,7 @@
 										text-anchor={isMobile ? 'middle' : 'start'}
 										fill="#F2F0EC"
 										fill-opacity="0.92"
-										font-family="JetBrains Mono, monospace"
+										font-family="var(--font-mono)"
 										font-size={labelPx(9.4, 8.4)}
 										font-weight="600"
 										letter-spacing={svgPx(1.0)}
@@ -779,7 +779,7 @@
 										text-anchor={isMobile ? 'middle' : 'start'}
 										fill="#DDB474"
 										fill-opacity="0.72"
-										font-family="JetBrains Mono, monospace"
+										font-family="var(--font-mono)"
 										font-size={labelPx(8.5, 7.5)}
 										font-weight="400"
 										letter-spacing={svgPx(0.8)}
@@ -832,7 +832,7 @@
 									y={pt.y + 3}
 									fill="#E8E6E1"
 									fill-opacity="0.62"
-									font-family="JetBrains Mono, monospace"
+									font-family="var(--font-mono)"
 									font-size={labelPx(8.5, 7.5)}
 									font-weight="400"
 									letter-spacing={svgPx(0.85)}
@@ -877,7 +877,7 @@
 								text-anchor="end"
 								fill="#E8E6E1"
 								fill-opacity="0.62"
-								font-family="JetBrains Mono, monospace"
+								font-family="var(--font-mono)"
 								font-size={labelPx(8.5, 7.5)}
 								font-weight="400"
 								letter-spacing={svgPx(0.9)}
@@ -917,7 +917,7 @@
 								text-anchor={isMobile ? 'middle' : 'start'}
 								fill="#DDB474"
 								fill-opacity="0.94"
-								font-family="JetBrains Mono, monospace"
+								font-family="var(--font-mono)"
 								font-size={labelPx(9.4, 8.4)}
 								font-weight="600"
 								letter-spacing={svgPx(1.15)}
@@ -933,7 +933,7 @@
 									text-anchor={isMobile ? 'middle' : 'start'}
 									fill="#E8E6E1"
 									fill-opacity="0.62"
-									font-family="JetBrains Mono, monospace"
+									font-family="var(--font-mono)"
 									font-size={labelPx(8.5, 7.5)}
 									font-weight="400"
 									letter-spacing={svgPx(0.85)}
@@ -950,7 +950,7 @@
 								text-anchor="middle"
 								fill="#DDB474"
 								fill-opacity="0.90"
-								font-family="JetBrains Mono, monospace"
+								font-family="var(--font-mono)"
 								font-size={labelPx(9.2, 8.2)}
 								font-weight="500"
 								letter-spacing={svgPx(1.05)}
@@ -1004,7 +1004,7 @@
 									text-anchor={isMobile ? 'middle' : isRight ? 'start' : 'end'}
 									fill="#F2F0EC"
 									fill-opacity="0.94"
-									font-family="JetBrains Mono, monospace"
+									font-family="var(--font-mono)"
 									font-size={labelPx(9.4, 8.4)}
 									font-weight="600"
 									letter-spacing={svgPx(1.05)}
@@ -1020,7 +1020,7 @@
 										text-anchor={isMobile ? 'middle' : isRight ? 'start' : 'end'}
 										fill="#E8E6E1"
 										fill-opacity="0.62"
-										font-family="JetBrains Mono, monospace"
+										font-family="var(--font-mono)"
 										font-size={labelPx(8.5, 7.5)}
 										font-weight="400"
 										letter-spacing={svgPx(0.8)}
@@ -1080,7 +1080,7 @@
 						text-anchor={isMobile ? 'middle' : 'end'}
 						fill="#F2F0EC"
 						fill-opacity="0.78"
-						font-family="JetBrains Mono, monospace"
+						font-family="var(--font-mono)"
 						font-size={labelPx(9.2, 9.0)}
 						font-weight="500"
 						letter-spacing={svgPx(1.05)}
@@ -1127,7 +1127,7 @@
 							y={solY - svgPx(42)}
 							text-anchor="middle"
 							fill="#DDB474"
-							font-family="JetBrains Mono, monospace"
+							font-family="var(--font-mono)"
 							font-size={labelPx(10.2, 9.6)}
 							font-weight="600"
 							letter-spacing={svgPx(1.15)}
@@ -1142,7 +1142,7 @@
 							text-anchor="middle"
 							fill="#F2F0EC"
 							fill-opacity="0.66"
-							font-family="JetBrains Mono, monospace"
+							font-family="var(--font-mono)"
 							font-size={labelPx(8.6, 8.2)}
 							font-weight="400"
 							letter-spacing={svgPx(0.85)}
@@ -1174,7 +1174,7 @@
 							y={solY + svgPx(38)}
 							text-anchor="middle"
 							fill="#F2F0EC"
-							font-family="JetBrains Mono, monospace"
+							font-family="var(--font-mono)"
 							font-size={labelPx(9.8, 9.2)}
 							font-weight="600"
 							letter-spacing={svgPx(0.95)}
@@ -1189,7 +1189,7 @@
 							text-anchor="middle"
 							fill="#E8E6E1"
 							fill-opacity="0.64"
-							font-family="JetBrains Mono, monospace"
+							font-family="var(--font-mono)"
 							font-size={labelPx(8.6, 8.2)}
 							font-weight="400"
 							letter-spacing={svgPx(0.8)}
@@ -1219,7 +1219,7 @@
 							x={solX + 35}
 							y={solY - 50 - svgPx(5)}
 							fill="#DDB474"
-							font-family="JetBrains Mono, monospace"
+							font-family="var(--font-mono)"
 							font-size={labelPx(10.2, 12.2)}
 							font-weight="600"
 							letter-spacing={svgPx(1.4)}
@@ -1233,7 +1233,7 @@
 							y={solY - 50 + svgPx(9.5)}
 							fill="#F2F0EC"
 							fill-opacity="0.65"
-							font-family="JetBrains Mono, monospace"
+							font-family="var(--font-mono)"
 							font-size={labelPx(8.6, 11.2)}
 							font-weight="400"
 							letter-spacing={svgPx(0.95)}
@@ -1266,7 +1266,7 @@
 							y={solY + 42 - svgPx(4.5)}
 							fill="#F2F0EC"
 							fill-opacity="0.94"
-							font-family="JetBrains Mono, monospace"
+							font-family="var(--font-mono)"
 							font-size={labelPx(9.8, 12.0)}
 							font-weight="600"
 							letter-spacing={svgPx(1.2)}
@@ -1280,7 +1280,7 @@
 							y={solY + 42 + svgPx(9.5)}
 							fill="#E8E6E1"
 							fill-opacity="0.62"
-							font-family="JetBrains Mono, monospace"
+							font-family="var(--font-mono)"
 							font-size={labelPx(8.6, 11.2)}
 							font-weight="400"
 							letter-spacing={svgPx(0.9)}
