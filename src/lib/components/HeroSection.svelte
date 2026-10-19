@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { scrollToSection } from '$lib/stores/scrollTelemetry';
-	import { introPhaseStore, startIntroSequence } from '$lib/stores/introSequence';
+	import { introPhaseStore } from '$lib/stores/introSequence';
+	import { prefersReducedMotion, scrubToward } from '$lib/stores/landingScroll';
 
 	// Exact UTC timestamp of Apollo-Soyuz orbital docking & handshake: July 17, 1975 16:09:00 UTC
 	const ASTP_EPOCH_MS = Date.UTC(1975, 6, 17, 16, 9, 0);
@@ -39,35 +40,44 @@
 	let missionClock = $state<MissionClock>(computeMissionElapsed(Date.now()));
 
 	// Subtle scroll-reactive parallax and fade over the 3D Rayleigh Earth horizon, in viewport heights
-	// scrolled (not whole-page progress, so the landing flight's length never retimes the hero)
+	// scrolled (not whole-page progress, so the landing flight's length never retimes the hero).
+	// Trails the scroll with the shared scrub catch-up, so a flick eases it rather than snapping it.
 	let heroScrollViewports = $state(0);
 	const heroParallaxY = $derived(Math.min(180, heroScrollViewports * 66));
 	const heroOpacity = $derived(Math.max(0, 1 - heroScrollViewports * 0.53));
 
-	// Intro staging: Earth (and its archival airglow) arrives on departure; chrome waits for the journey
-	const earthArrived = $derived($introPhaseStore !== 'void');
+	// Mission-control chrome takes input only once the intro reaches it
 	const chromeHidden = $derived($introPhaseStore !== 'journey');
 
 	onMount(() => {
-		const stopIntroSequence = startIntroSequence();
 		const clockInterval = window.setInterval(() => {
 			missionClock = computeMissionElapsed(Date.now());
 		}, 1000);
 
 		let rafId = 0;
-		const syncHeroScroll = () => {
-			rafId = 0;
-			heroScrollViewports = window.scrollY / Math.max(1, window.innerHeight);
+		let prev = 0;
+		const step = (now: number) => {
+			const dt = prev === 0 ? 1 / 60 : Math.min(0.05, (now - prev) / 1000);
+			prev = now;
+			const target = window.scrollY / Math.max(1, window.innerHeight);
+			const next = prefersReducedMotion() ? target : scrubToward(heroScrollViewports, target, dt);
+			const settled = Math.abs(target - next) < 0.0005;
+			heroScrollViewports = settled ? target : next;
+			if (settled) {
+				rafId = 0;
+				prev = 0;
+			} else {
+				rafId = window.requestAnimationFrame(step);
+			}
 		};
 		const scheduleHeroScroll = () => {
-			if (rafId === 0) rafId = window.requestAnimationFrame(syncHeroScroll);
+			if (rafId === 0) rafId = window.requestAnimationFrame(step);
 		};
-		syncHeroScroll();
+		heroScrollViewports = window.scrollY / Math.max(1, window.innerHeight);
 		window.addEventListener('scroll', scheduleHeroScroll, { passive: true });
 		window.addEventListener('resize', scheduleHeroScroll, { passive: true });
 
 		return () => {
-			stopIntroSequence();
 			window.clearInterval(clockInterval);
 			if (rafId !== 0) window.cancelAnimationFrame(rafId);
 			window.removeEventListener('scroll', scheduleHeroScroll);
@@ -84,7 +94,6 @@
 	<!-- Subtle Archival Airglow Whisper + Localized Left Scrim — arrives with Earth on departure -->
 	<div
 		class="intro-arrival hero-airglow pointer-events-none absolute inset-0 z-0 overflow-hidden"
-		data-arrived={earthArrived}
 		aria-hidden="true"
 	>
 		<picture class="block h-full w-full">
@@ -159,12 +168,7 @@
 
 		<!-- State 1 Departure Cue, then the Quiet Typographic Scroll Invitation in the same slot -->
 		<div class="relative mt-6 sm:mt-14">
-			<div
-				class="departure-cue"
-				data-active={$introPhaseStore === 'departure'}
-				data-testid="departure-cue"
-				aria-hidden="true"
-			>
+			<div class="departure-cue" data-testid="departure-cue" aria-hidden="true">
 				<span class="departure-cue__line"></span>
 				<span
 					class="departure-cue__label font-mono-tech text-[11px] sm:text-xs tracking-[0.16em] uppercase text-[#E8E6E1]/80"
@@ -252,7 +256,8 @@
 		animation: heroKenBurns 28s cubic-bezier(0.22, 1, 0.36, 1) infinite alternate;
 	}
 
-	/* State 0: the title arrives alone in a slow masked rise; the eyebrow follows a beat later */
+	/* State 0: the title arrives alone in a slow masked rise; the eyebrow follows a beat later.
+	   A return visit this session starts post-intro, and reduced motion shows the final state. */
 	.intro-title-line {
 		display: block;
 		will-change: transform, opacity;
@@ -272,20 +277,24 @@
 		animation: maskedLineRise 1.6s var(--ease-out-quint) 2.7s both;
 	}
 
-	/* State 1: archival airglow arrives with Earth and retires with it on return to the void */
+	:global(html[data-intro-played]) .intro-title-line,
+	:global(html[data-intro-played]) .intro-eyebrow {
+		animation: none;
+	}
+
+	/* States 1–2 are scrubbed by the intro gate through --intro-s (timeline seconds; unset once the
+	   intro is complete). Windows match INTRO_BEATS in src/lib/stores/introSequence.ts. */
+
+	/* The archival airglow arrives with Earth, 0.6 → 3.2 s */
 	.intro-arrival {
-		opacity: 0;
-		transition: opacity 1.6s var(--ease-in-out-cubic);
+		--arrive: clamp(0, calc((var(--intro-s, 99) - 0.6) / 2.6), 1);
+		opacity: calc(var(--arrive) * var(--arrive) * (3 - 2 * var(--arrive)));
 	}
 
-	.intro-arrival[data-arrived='true'] {
-		opacity: 1;
-		transition: opacity 2.6s var(--ease-in-out-cubic);
-	}
-
-	/* State 1: departure cue — a hairline draws, the readout resolves, then the cue dissolves on its
-	   own (~2s) so Earth finishes its arrival alone before mission control comes online */
+	/* Departure cue: a hairline draws, the readout resolves, then the cue dissolves (2.0 → 2.6 s)
+	   so Earth finishes rising alone before mission control comes online */
 	.departure-cue {
+		--cue-s: var(--intro-s, 99);
 		position: absolute;
 		top: 0;
 		left: 0;
@@ -294,69 +303,28 @@
 		gap: 0.65rem;
 		white-space: nowrap;
 		pointer-events: none;
-		opacity: 0;
 		text-shadow: 0 1px 10px rgba(5, 6, 7, 0.96);
-		transition: opacity 0.5s var(--ease-in-out-cubic);
-	}
-
-	.departure-cue[data-active='true'] {
-		animation: departureCueBeat 2s var(--ease-in-out-cubic) both;
-	}
-
-	@keyframes departureCueBeat {
-		0% {
-			opacity: 0;
-		}
-		6% {
-			opacity: 1;
-		}
-		70% {
-			opacity: 1;
-		}
-		100% {
-			opacity: 0;
-		}
+		opacity: min(
+			clamp(0, calc((var(--cue-s) - 0.6) / 0.12), 1),
+			clamp(0, calc((2.6 - var(--cue-s)) / 0.6), 1)
+		);
 	}
 
 	.departure-cue__line {
+		--draw: clamp(0, calc((var(--cue-s) - 0.6) / 0.75), 1);
 		display: block;
 		height: 1px;
 		width: 100%;
 		background: linear-gradient(90deg, rgba(200, 155, 87, 0.9), rgba(200, 155, 87, 0.12));
-		transform: scaleX(0);
+		transform: scaleX(calc(1 - (1 - var(--draw)) * (1 - var(--draw)) * (1 - var(--draw))));
 		transform-origin: left center;
-		transition: transform 0s linear 0.5s;
-	}
-
-	.departure-cue[data-active='true'] .departure-cue__line {
-		transform: scaleX(1);
-		transition: transform 0.75s var(--ease-out-expo);
 	}
 
 	.departure-cue__label {
+		--resolve: clamp(0, calc((var(--cue-s) - 0.95) / 0.5), 1);
 		display: block;
-		opacity: 0;
-		transform: translate3d(0, 6px, 0);
-		transition:
-			opacity 0s linear 0.5s,
-			transform 0s linear 0.5s;
-	}
-
-	.departure-cue[data-active='true'] .departure-cue__label {
-		opacity: 1;
-		transform: none;
-		transition:
-			opacity 0.45s var(--ease-out-quint) 0.35s,
-			transform 0.6s var(--ease-out-expo) 0.35s;
-	}
-
-	@keyframes introFadeOnly {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
+		opacity: var(--resolve);
+		transform: translate3d(0, calc((1 - var(--resolve)) * (1 - var(--resolve)) * 6px), 0);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
@@ -367,17 +335,7 @@
 
 		.intro-title-line,
 		.intro-eyebrow {
-			animation-name: introFadeOnly;
-		}
-
-		.departure-cue__line,
-		.departure-cue[data-active='true'] .departure-cue__line {
-			transform: none;
-		}
-
-		.departure-cue__label,
-		.departure-cue[data-active='true'] .departure-cue__label {
-			transform: none;
+			animation: none;
 		}
 	}
 </style>

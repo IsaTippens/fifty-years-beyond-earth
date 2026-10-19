@@ -6,6 +6,7 @@
 		journeyWaypointForChapter,
 		syncLandingJourney
 	} from '$lib/stores/landingJourney';
+	import { prefersReducedMotion, scrubToward } from '$lib/stores/landingScroll';
 
 	interface PanelMotion {
 		/** Panel centre relative to viewport centre, in viewport heights (−1 … 1). */
@@ -19,6 +20,7 @@
 	const STAGGER_SPAN = 0.7;
 
 	let stripEl: HTMLElement | undefined = $state();
+	/** Scrubbed motion per panel: trails the scroll-driven targets with the shared catch-up. */
 	let panelMotion = $state<Record<string, PanelMotion>>({});
 
 	const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -35,36 +37,59 @@
 		return `transform: translate3d(0, ${((1 - easeOutCubic(t)) * 28).toFixed(1)}px, 0);`;
 	}
 
-	function syncViewportMotion() {
-		if (!stripEl || typeof window === 'undefined') return;
+	/** Where each panel's motion should be at the current scroll position. */
+	function readMotionTargets(): Record<string, PanelMotion> {
 		const vh = Math.max(1, window.innerHeight);
-		const next: Record<string, PanelMotion> = {};
+		const targets: Record<string, PanelMotion> = {};
+		if (!stripEl) return targets;
 		for (const el of stripEl.querySelectorAll<HTMLElement>('[data-journey-panel]')) {
 			const id = el.dataset.chapterPanel;
 			if (!id) continue;
 			const rect = el.getBoundingClientRect();
-			next[id] = {
+			targets[id] = {
 				offset: Math.max(-1, Math.min(1, (rect.top + rect.height * 0.5 - vh * 0.5) / vh)),
 				entry: clamp01((vh - rect.top) / (vh * ENTRY_RISE_VIEWPORT))
 			};
 		}
-		panelMotion = next;
-		syncLandingJourney();
+		return targets;
 	}
 
 	onMount(() => {
 		if (!stripEl) return;
 
 		let rafId = 0;
-		const schedule = () => {
-			if (rafId !== 0) return;
-			rafId = window.requestAnimationFrame(() => {
+		let prev = 0;
+		// Runs while scrolling and until every panel has caught up, then idles
+		const step = (now: number) => {
+			const dt = prev === 0 ? 1 / 60 : Math.min(0.05, (now - prev) / 1000);
+			prev = now;
+			syncLandingJourney();
+			const targets = readMotionTargets();
+			const instant = prefersReducedMotion();
+			const next: Record<string, PanelMotion> = {};
+			let settled = true;
+			for (const [id, target] of Object.entries(targets)) {
+				const current = panelMotion[id] ?? target;
+				const offset = instant ? target.offset : scrubToward(current.offset, target.offset, dt);
+				const entry = instant ? target.entry : scrubToward(current.entry, target.entry, dt);
+				const done = Math.abs(target.offset - offset) < 0.0005 && Math.abs(target.entry - entry) < 0.0005;
+				next[id] = done ? target : { offset, entry };
+				if (!done) settled = false;
+			}
+			panelMotion = next;
+			if (settled) {
 				rafId = 0;
-				syncViewportMotion();
-			});
+				prev = 0;
+			} else {
+				rafId = window.requestAnimationFrame(step);
+			}
+		};
+		const schedule = () => {
+			if (rafId === 0) rafId = window.requestAnimationFrame(step);
 		};
 
-		syncViewportMotion();
+		panelMotion = readMotionTargets();
+		syncLandingJourney();
 		window.addEventListener('scroll', schedule, { passive: true });
 		window.addEventListener('resize', schedule, { passive: true });
 		// Late-loading plates and fonts move every panel below them
@@ -125,7 +150,7 @@
 						<!-- Hard-Cropped Plate Viewport -->
 						<div class="relative aspect-[16/10] sm:aspect-[16/10] lg:h-[54vh] lg:max-h-[540px] w-full overflow-hidden bg-[#050607]">
 							<div
-								class="h-full w-full will-change-transform transition-transform duration-300 ease-out"
+								class="h-full w-full will-change-transform"
 								style={`transform: translate3d(0, ${imageTranslateY.toFixed(1)}px, 0) scale(${imageScale.toFixed(3)});`}
 							>
 								{#if ch.visual.kind === 'responsive-plate'}

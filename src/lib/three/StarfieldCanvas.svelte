@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as THREE from 'three';
-  import { get } from 'svelte/store';
   import { telemetryStore, type TelemetryState } from '$lib/stores/scrollTelemetry';
-  import { introPhaseStore } from '$lib/stores/introSequence';
+  import { introEarthArrival, introPhaseStore, introTimeStore } from '$lib/stores/introSequence';
+  import { fastTravelStore, SCRUB_CATCH_UP_RATE } from '$lib/stores/landingScroll';
   import {
     journeyStore,
     JOURNEY_WAYPOINTS,
@@ -935,9 +935,7 @@
 
   // Intro choreography: idle outward drift keeps the void traveled-through before any scroll
   const STAR_IDLE_DRIFT_PER_SECOND = 1.6;
-  // Earth arrives on departure (rising from below frame as the camera eases back) and recedes on return to the void
-  const EARTH_ARRIVAL_SECONDS = 2.8;
-  const EARTH_RECEDE_SECONDS = 2.0;
+  // Earth rises into frame as the camera eases back, scrubbed by the intro gate's timeline
   const EARTH_ARRIVAL_DROP = 9.5;
   const CAMERA_ARRIVAL_PUSH_IN = 1.8;
   const EARTH_ARRIVAL_SPIN = 0.35;
@@ -968,12 +966,16 @@
       currentChapterIndex = targetChapterIndex;
     });
 
-    let earthArrivalTarget = 0;
-    const unsubscribeIntro = introPhaseStore.subscribe((phase) => {
-      earthArrivalTarget = phase === 'void' ? 0 : 1;
+    // Earth's arrival follows the intro timeline (already on station once the intro is complete)
+    let earthArrivalLinear = 0;
+    const unsubscribeIntro = introTimeStore.subscribe((seconds) => {
+      earthArrivalLinear = introEarthArrival(seconds);
     });
-    // Mounted mid-journey (late load or restored scroll): Earth is already on station
-    let earthArrivalLinear = get(introPhaseStore) === 'journey' ? 1 : 0;
+    // Fast travel (in-page navigation) lifts the camera's speed cap so it lands with the page
+    let fastTravel = false;
+    const unsubscribeFastTravel = fastTravelStore.subscribe((active) => {
+      fastTravel = active;
+    });
 
     let targetJourney = 0;
     let targetLabelOpacity = 0;
@@ -986,6 +988,7 @@
       return () => {
         unsubscribeTelemetry();
         unsubscribeIntro();
+        unsubscribeFastTravel();
         unsubscribeJourney();
       };
     }
@@ -1004,6 +1007,7 @@
       return () => {
         unsubscribeTelemetry();
         unsubscribeIntro();
+        unsubscribeFastTravel();
         unsubscribeJourney();
       };
     }
@@ -1681,8 +1685,13 @@
     /** How far the camera turns into its flight heading, and how much it banks with the turn. */
     const FLIGHT_HEADING_FOLLOW = 0.32;
     const FLIGHT_BANK = 0.6;
-    /** Damping rate (1/s) easing the camera onto the scroll-driven journey coordinate. */
-    const JOURNEY_DAMPING = 6.0;
+    /**
+     * Hard ceiling on camera speed through the journey, in coordinate units per second (one unit is
+     * one waypoint hold or one flight leg): no flick can carry the camera faster than this.
+     */
+    const MAX_JOURNEY_SPEED = 2.0;
+    /** Fly-through catch-up: tracks the eased fast travel closely, uncapped, so it lands on time. */
+    const FAST_TRAVEL_CATCH_UP = 12.0;
     /** Mesh yaw that turns texture column `u` toward +Z (the camera) for SphereGeometry UVs. */
     const faceTextureColumn = (u: number): number => Math.PI * 0.5 - Math.PI * 2.0 * u;
     // Each body shows its best-imaged hemisphere: the archival mosaics have unimaged gaps elsewhere
@@ -2048,14 +2057,7 @@
       prevTime = now;
       const elapsed = (now - startTime) * 0.001;
 
-      // Intro choreography: time-based Earth arrival (departure) / recession (back to the void)
-      if (earthArrivalLinear !== earthArrivalTarget) {
-        const arriving = earthArrivalTarget > earthArrivalLinear;
-        const step = Math.min(frameSeconds, 0.25) / (arriving ? EARTH_ARRIVAL_SECONDS : EARTH_RECEDE_SECONDS);
-        earthArrivalLinear = arriving
-          ? Math.min(earthArrivalTarget, earthArrivalLinear + step)
-          : Math.max(earthArrivalTarget, earthArrivalLinear - step);
-      }
+      // Intro choreography: Earth's arrival is scrubbed by the intro gate (see introTimeStore)
       // Quintic smootherstep: the finale's smoothstep easing with a softer launch and settle
       const earthArrival = smootherstep01(earthArrivalLinear);
       const earthArrivalRise = prefersReducedMotion ? 0 : 1.0 - earthArrival;
@@ -2065,9 +2067,20 @@
       smoothScroll += (targetScrollProgress - smoothScroll) * lerpFactor;
       smoothChapter += (targetChapterIndex - smoothChapter) * 0.085;
 
-      const damping = 1.0 - Math.exp(-dt * JOURNEY_DAMPING);
-      smoothJourney += (THREE.MathUtils.clamp(targetJourney, 0, MAX_JOURNEY) - smoothJourney) * damping;
-      smoothLabelOpacity += (targetLabelOpacity - smoothLabelOpacity) * damping;
+      // Mass, not lag: the camera trails the Lenis-smoothed scroll (~0.9 s to settle end to end)
+      // and never moves faster than MAX_JOURNEY_SPEED, so a flick becomes a glide, not a jump
+      const journeyTarget = THREE.MathUtils.clamp(targetJourney, 0, MAX_JOURNEY);
+      if (prefersReducedMotion) {
+        smoothJourney = journeyTarget;
+        smoothLabelOpacity = targetLabelOpacity;
+      } else {
+        const catchUp = 1.0 - Math.exp(-dt * (fastTravel ? FAST_TRAVEL_CATCH_UP : SCRUB_CATCH_UP_RATE));
+        const maxStep = fastTravel ? Infinity : MAX_JOURNEY_SPEED * dt;
+        smoothJourney += THREE.MathUtils.clamp((journeyTarget - smoothJourney) * catchUp, -maxStep, maxStep);
+        // The solo label names the waypoint under the camera: a capped camera still in flight hides it
+        const cameraArrived = 1.0 - THREE.MathUtils.smoothstep(Math.abs(journeyTarget - smoothJourney), 0.05, 0.25);
+        smoothLabelOpacity += (targetLabelOpacity * cameraArrived - smoothLabelOpacity) * catchUp;
+      }
 
       smoothMouseX += (targetMouseX - smoothMouseX) * 0.05;
       smoothMouseY += (targetMouseY - smoothMouseY) * 0.05;
@@ -2304,6 +2317,7 @@
       mediaReducedMotion.removeEventListener('change', handleReducedMotionChange);
       unsubscribeTelemetry();
       unsubscribeIntro();
+      unsubscribeFastTravel();
       unsubscribeJourney();
 
       nebulaGeometry.dispose();

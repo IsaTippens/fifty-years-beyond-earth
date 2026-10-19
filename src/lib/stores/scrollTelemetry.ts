@@ -1,4 +1,5 @@
 import { writable, type Writable } from 'svelte/store';
+import { scrollToPosition } from '$lib/stores/landingScroll';
 
 export interface TelemetryState {
 	scrollProgress: number; // 0 to 1
@@ -421,8 +422,8 @@ export function startLiveVoyagerTicker(): () => void {
 }
 
 /**
- * Smoothly scrolls to a target chapter, milestone, or section element ID,
- * trying exact IDs as well as semantic fallbacks.
+ * Brings a target chapter, milestone, or section element ID into view, trying exact IDs as well
+ * as semantic fallbacks. On the landing page this is a fast-travel fly-through (scrollToPosition).
  */
 export function scrollToSection(elementId: string): void {
 	if (typeof document === 'undefined' || !elementId) return;
@@ -469,10 +470,6 @@ export function scrollToSection(elementId: string): void {
 	if (target) {
 		const headerOffset = 72;
 		const elementPosition = target.getBoundingClientRect().top + window.scrollY;
-		const offsetPosition = Math.max(0, elementPosition - headerOffset);
-		window.scrollTo({
-			top: offsetPosition,
-			behavior: 'smooth'
-		});
+		scrollToPosition(elementPosition - headerOffset);
 	}
 }

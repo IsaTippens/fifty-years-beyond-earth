@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { telemetryStore, openChapterDirectory } from '$lib/stores/scrollTelemetry';
+	import { prefersReducedMotion, scrubToward } from '$lib/stores/landingScroll';
 
 	const AU_PER_LY = 63_241.077;
 
@@ -342,14 +343,14 @@
 		smoothP = targetP;
 
 		let rafId = 0;
-		function tick() {
+		let prev = performance.now();
+		// The pull-back trails the scroll with the shared scrub catch-up (instant for reduced motion)
+		function tick(now: number) {
 			computeTargetProgress();
-			const delta = targetP - smoothP;
-			if (Math.abs(delta) > 0.0001) {
-				smoothP += delta * 0.14;
-			} else {
-				smoothP = targetP;
-			}
+			const dt = Math.min(0.05, Math.max(0, (now - prev) / 1000));
+			prev = now;
+			const next = prefersReducedMotion() ? targetP : scrubToward(smoothP, targetP, dt);
+			smoothP = Math.abs(targetP - next) > 0.0001 ? next : targetP;
 			rafId = window.requestAnimationFrame(tick);
 		}
 

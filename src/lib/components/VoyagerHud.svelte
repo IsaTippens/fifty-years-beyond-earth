@@ -10,7 +10,8 @@
 		scrollToSection
 	} from '$lib/stores/scrollTelemetry';
 	import { CHAPTER_HIGHLIGHTS, getHighlightBySlug } from '$lib/data/highlights';
-	import { introPhaseStore } from '$lib/stores/introSequence';
+	import { introPhaseStore, skipIntro } from '$lib/stores/introSequence';
+	import { scrollToPosition } from '$lib/stores/landingScroll';
 	import { journeyStore } from '$lib/stores/landingJourney';
 
 	interface RailBenchmark {
@@ -54,7 +55,7 @@
 		return getHighlightBySlug(slug);
 	});
 
-	// Landing intro choreography: chrome stays off-stage until the departure beat resolves
+	// Landing intro: chrome takes no input until the gate's timeline reaches mission control
 	const introChromeHidden = $derived(isLandingPage && $introPhaseStore !== 'journey');
 
 	// Close menus on route change
@@ -175,14 +176,16 @@
 				1,
 				document.documentElement.scrollHeight - window.innerHeight
 			);
-			window.scrollTo({
-				top: fallbackProgress * docHeight,
-				behavior: 'smooth'
-			});
+			scrollToPosition(fallbackProgress * docHeight);
 		} else {
 			scrollToSection(cleanId);
 		}
 	}
+
+	// Opening the chapters menu or telemetry drawer (by any route) is an intro escape hatch
+	$effect(() => {
+		if (chapterMenuOpen || telemetryDrawerOpen) skipIntro();
+	});
 
 	function toggleChapterMenu() {
 		chapterMenuOpen = !chapterMenuOpen;
@@ -198,12 +201,13 @@
 		}
 	}
 
+	/** On the landing page, home links fly back to the top instead of reloading the route. */
 	function handleWordmarkClick(e: MouseEvent) {
 		telemetryDrawerOpen = false;
 		chapterMenuOpen = false;
 		if (isLandingPage && typeof window !== 'undefined') {
 			e.preventDefault();
-			window.scrollTo({ top: 0, behavior: 'smooth' });
+			scrollToPosition(0);
 		}
 	}
 
@@ -243,7 +247,7 @@
 </script>
 
 <!-- BORDERLESS, QUIET DOCUMENTARY TOP BAR (CHROME DIET — FADES OUT COMPLETELY IN FINALE) -->
-<!-- Landing intro: held back until the departure beat resolves; retires again at the very top -->
+<!-- Landing intro: faded in by the intro gate (--intro-s) once the departure beat resolves -->
 <div
 	class="intro-stage intro-slot-topbar relative z-50"
 	data-intro-hidden={introChromeHidden && !chapterMenuOpen && !telemetryDrawerOpen}
@@ -366,6 +370,7 @@
 			<nav
 				id="chapter-menu-overlay"
 				aria-label="Chapter & Colophon Directory"
+				data-lenis-prevent
 				class="bg-[#07080A]/96 backdrop-blur-xl border-t border-b border-[#E8E6E1]/14 max-h-[calc(100vh-3.25rem)] overflow-y-auto transition-all duration-500"
 			>
 				<div class="mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12 py-5 sm:py-8 space-y-6">
@@ -376,7 +381,7 @@
 						<div class="flex items-center gap-5 font-mono-tech text-[11px] tracking-[0.14em] uppercase">
 							<a
 								href="/"
-								onclick={() => (chapterMenuOpen = false)}
+								onclick={handleWordmarkClick}
 								class="text-[#E8E6E1]/75 hover:text-[#C89B57] transition-colors duration-300"
 							>
 								{isLandingPage ? '↑ Top of Trailer Cut' : '← Return to Trailer Cut (/)'}

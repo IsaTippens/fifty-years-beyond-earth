@@ -24,6 +24,24 @@
 			imagesrcset="/assets/chapters/iss-earth-limb-800.avif 800w, /assets/chapters/iss-earth-limb-1600.avif 1600w, /assets/chapters/iss-earth-limb-2400.avif 2400w"
 			imagesizes="100vw"
 		/>
+		<script>
+			// Landing intro, first paint (before hydration): hold a first visit at State 0, or start a
+			// return visit this session (or reduced motion) post-intro. Mirrors shouldGate() in
+			// src/lib/stores/introSequence.ts, which owns the gate once the page is running.
+			(function () {
+				if (location.pathname !== '/') return;
+				var root = document.documentElement;
+				var played = false;
+				try {
+					played = sessionStorage.getItem('fybe:intro-played') === '1';
+				} catch (e) {}
+				if (played || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+					root.setAttribute('data-intro-played', 'true');
+				} else {
+					root.style.setProperty('--intro-s', '0');
+				}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body

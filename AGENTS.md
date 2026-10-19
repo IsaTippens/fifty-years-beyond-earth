@@ -11,12 +11,13 @@
    - Provide a persistent, obvious toggle chip (`DATA −` / `DATA +`) that collapses all readout panels to a single corner chip — **collapsed by default on mobile (`< 768px`)**.
    - Apply `pointer-events: none` (`pointer-events-none`) to all decorative overlay wrappers so drag-to-orbit works across the entire canvas; only actual interactive buttons/inputs take `pointer-events: auto`.
    - On mobile (`< 768px`), render readout panels **below** the 3D scene rather than overlapping the canvas.
-3. **The landing intro is staged like the finale** (`src/lib/stores/introSequence.ts`, identical on mobile):
-   - **State 0 (`void`)** — before any scroll: drifting starfield + title (eyebrow a beat later) only. No top bar, rail, HUD readouts, waypoint callouts, subcopy, stats, CTA, Earth, or airglow plate.
-   - **State 1 (`departure`)** — first downward wheel/swipe/key at the top: the departure cue resolves and dissolves while Earth rises into frame as the camera eases back. Chrome stays hidden.
-   - **Scroll is held at the top** from departure until the last stagger slot has faded in; only then may the page move on to the first chapter (gestures over the top bar and in text inputs pass through; scrollbar drags and jumps fall back to scroll-position staging).
-   - **State 2 (`journey`)** — departure resolved: chrome staggers in (top bar → readouts → rail → subcopy → CTA → stats) via `.intro-stage` + `.intro-slot-*` in `app.css`.
-   - Returning to the very top reverses the sequence (chrome retires in mirrored order; title and stars remain). New landing chrome must join a stagger slot rather than appear at load.
+3. **The landing intro is a bounded gate, staged like the finale** (`src/lib/stores/introSequence.ts`, identical on mobile). It is the **only** place the landing page may hold scroll — never extend hijacking beyond it:
+   - **State 0 (`void`)** — on load: drifting starfield + title (eyebrow a beat later) only. No top bar, rail, HUD readouts, waypoint callouts, subcopy, stats, CTA, Earth, or airglow plate. The page is locked (stage pinned, scrollbar still visible).
+   - While locked, every scroll input (wheel, touch drag, keys, scrollbar) **scrubs the intro timeline** instead of moving the page, capped at 2× natural speed (never under ~2.8 s, never skipped); left idle it plays on by itself. **State 1 (`departure`)**: the departure cue resolves and dissolves while Earth rises into frame. **State 2 (`journey`)**: chrome staggers in (top bar → readouts → rail → subcopy → CTA → stats).
+   - The DOM side is pure CSS: the gate writes `--intro-s` (timeline seconds) on `<html>`, and `.intro-stage` + `.intro-slot-*` (`app.css`) and the hero's cue/airglow windows derive from it, matching `INTRO_BEATS`. New landing chrome must join a stagger slot rather than appear at load.
+   - Escape hatches are mandatory: the discreet Skip affordance (~1 s in, until the chrome arrives), Esc, opening the chapters menu or telemetry drawer, keyboard focus leaving the hero, and any in-page navigation. It plays once per session (`sessionStorage`), and never for `prefers-reduced-motion` or a page that loads scrolled/deep-linked (`app.html` sets the first-paint state).
+   - Release hands off in place (no jump, no re-layout) to the weighted journey; returning to the top does not re-gate.
+4. **Landing scroll is weighted, never trapped** (`src/lib/stores/landingScroll.ts`): Lenis (lerp 0.1, `syncTouch` with a finger-exact drag) on `gsap.ticker`, synced to ScrollTrigger. Scroll-scrubbed motion (camera, parallax, finale) trails the scroll with `scrubToward`/`SCRUB_CATCH_UP_RATE`; the camera also has a hard speed cap (`MAX_JOURNEY_SPEED`) lifted only during fast travel. In-page navigation goes through `scrollToPosition` (eased fly-through ≤ 2.4 s); scrollbar, keyboard, find-in-page and text selection stay native. Reduced motion: no Lenis, instant jumps, instant scrubs.
 
 ## Architecture & Provenance Invariants
 

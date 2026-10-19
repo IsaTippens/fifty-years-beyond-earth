@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'lenis/dist/lenis.css';
 @import './lib/styles/tokens.css';
 
 @theme {
@@ -211,33 +212,30 @@ body {
 }
 
 /* ==========================================================================
-   Landing Intro Choreography (State 0 void → State 1 departure → State 2 journey)
-   `data-intro-hidden="true"` holds an element back until mission control comes
-   online. Each slot's --intro-out mirrors its --intro-in, so scrolling back to
-   the very top retires the chrome in reverse order. Plain `.intro-stage` never
-   sets a transform, so it is safe around position: fixed chrome.
+   Landing Intro (State 0 void → State 1 departure → State 2 journey)
+   Scrubbed by the intro gate (src/lib/stores/introSequence.ts), which writes
+   the timeline position, in natural seconds, to --intro-s on <html>. Each slot
+   fades in over 1 s from its --intro-at; rise variants also travel 14px over
+   1.2 s. Unset --intro-s means the intro is complete: everything revealed.
+   `data-intro-hidden` only gates interaction until mission control is online.
+   Plain `.intro-stage` never sets a transform, so it is safe around fixed chrome.
    ========================================================================== */
 .intro-stage {
-	transition: opacity 1s var(--ease-out-quint) var(--intro-in, 0ms);
-}
-
-.intro-stage[data-intro-hidden='true'] {
-	opacity: 0;
-	pointer-events: none;
-	transition: opacity 0.6s var(--ease-in-out-cubic) var(--intro-out, 0ms);
+	--intro-k: clamp(0, calc(var(--intro-s, 99) - var(--intro-at, 3.2)), 1);
+	opacity: calc(var(--intro-k) * var(--intro-k) * (3 - 2 * var(--intro-k)));
 }
 
 .intro-stage--rise {
-	transition:
-		opacity 1s var(--ease-out-quint) var(--intro-in, 0ms),
-		transform 1.2s var(--ease-out-quint) var(--intro-in, 0ms);
+	--intro-r: clamp(0, calc((var(--intro-s, 99) - var(--intro-at, 3.2)) / 1.2), 1);
+	transform: translate3d(
+		0,
+		calc((1 - var(--intro-r)) * (1 - var(--intro-r)) * (1 - var(--intro-r)) * 14px),
+		0
+	);
 }
 
-.intro-stage--rise[data-intro-hidden='true'] {
-	transform: translate3d(0, 14px, 0);
-	transition:
-		opacity 0.6s var(--ease-in-out-cubic) var(--intro-out, 0ms),
-		transform 0.6s var(--ease-in-out-cubic) var(--intro-out, 0ms);
+.intro-stage[data-intro-hidden='true'] {
+	pointer-events: none;
 }
 
 /* Keyboard focus reaching held-back chrome reveals it at once */
@@ -245,43 +243,31 @@ body {
 	opacity: 1;
 	transform: none;
 	pointer-events: auto;
-	transition-delay: 0ms;
 }
 
+/* Slot start times (s): the stagger from INTRO_BEATS.chrome (3.2) that the gate scrubs through */
 .intro-slot-topbar {
-	--intro-in: 0ms;
-	--intro-out: 600ms;
+	--intro-at: 3.2;
 }
 
 .intro-slot-readout {
-	--intro-in: 260ms;
-	--intro-out: 450ms;
+	--intro-at: 3.46;
 }
 
 .intro-slot-rail {
-	--intro-in: 520ms;
-	--intro-out: 300ms;
+	--intro-at: 3.72;
 }
 
 .intro-slot-subcopy {
-	--intro-in: 800ms;
-	--intro-out: 160ms;
+	--intro-at: 4;
 }
 
 .intro-slot-action {
-	--intro-in: 980ms;
-	--intro-out: 80ms;
+	--intro-at: 4.18;
 }
 
 .intro-slot-stats {
-	--intro-in: 1140ms;
-	--intro-out: 0ms;
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.intro-stage--rise[data-intro-hidden='true'] {
-		transform: none;
-	}
+	--intro-at: 4.34;
 }
 
 /* Atmospheric Film Grain & Vignette Overlays (opacity: 0.028, pointer-events: none) */
