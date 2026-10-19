@@ -2,9 +2,21 @@
 	import '../app.css';
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/stores';
+	import { beforeNavigate } from '$app/navigation';
 	import VoyagerHud from '$lib/components/VoyagerHud.svelte';
 
 	let { children }: { children: Snippet } = $props();
+
+	// Route changes land instantly: SvelteKit's scroll reset / back-button restore must not inherit
+	// the root `scroll-smooth` (meant for in-page anchors) and glide the new page from the old offset
+	beforeNavigate((navigation) => {
+		if (navigation.willUnload) return;
+		const root = document.documentElement;
+		root.style.scrollBehavior = 'auto';
+		navigation.complete
+			.catch(() => {})
+			.finally(() => root.style.removeProperty('scroll-behavior'));
+	});
 
 	const DEFAULT_ORIGIN = 'https://fifty-years-beyond-earth.pages.dev';
 	const defaultTitle = 'Fifty Years Beyond Earth (1975–2026+)';
